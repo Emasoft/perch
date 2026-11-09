@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { configuredEnvironment } from '../src/config.js';
-import { configuredSystemOne } from '../src/cloud-client.js';
+import { configuredSystemOne } from '../src/endpoint.js';
 import { main } from '../src/cli.js';
 
 const homes = [];
@@ -20,21 +20,21 @@ async function configHome(content) {
 }
 
 describe('CLI configuration', () => {
-  it('uses ~/.perch/config.toml for endpoint, model, and Cloud scope', async () => {
-    const home = await configHome(`model = "jev-test"
+  it('uses ~/.perch/config.toml for the endpoint and the model, environment first', async () => {
+    const home = await configHome(`base_url = "https://api.example.com/v1/systemone"
+model = "jev-test"
 organization = "org-test"
 repository = "repo-test"
 `);
     const env = await configuredEnvironment({ HOME: home, PERCH_API_KEY: 'perch_ci_test' });
-    expect(env).toMatchObject({
-      PERCH_MODEL_ID: 'jev-test',
-      PERCH_ORGANIZATION: 'org-test',
-      PERCH_REPOSITORY: 'repo-test',
-    });
+    expect(env).toMatchObject({ PERCH_BASE_URL: 'https://api.example.com/v1/systemone', PERCH_MODEL_ID: 'jev-test' });
+    // organization and repository belonged to the hosted service, and a config file that still carries them is read rather than
+    // refused: a schema change that hard-errors someone's existing file breaks a working setup to remove a feature they never
+    // mentioned.
+    expect(env.PERCH_REPOSITORY).toBe('repo-test');
 
     const client = await configuredSystemOne({
       env,
-      root: home,
       fetchImpl: async () => new Response(JSON.stringify({ model: 'jev-default', epoch: '1' })),
     });
     expect(client.id).toBe('jev-test');
@@ -83,7 +83,6 @@ repository = "repo-test"
     const doctor = JSON.parse(output.at(-1));
     expect(doctor.checks).toContainEqual(expect.objectContaining({ name: 'config', ok: false }));
     expect(doctor.checks.find(check => check.name === 'config').found).toContain('Unknown setting modle');
-    expect(await main(['logout'], io)).toBe(0);
     expect(errors).not.toContainEqual(expect.stringContaining('perch:'));
   });
 });

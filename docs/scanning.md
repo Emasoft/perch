@@ -75,7 +75,7 @@ order-service at commit b412add: 4 methods, read 4
 
 Perch only reports methods under the path you give it, but the model still sees their callers and callees from the rest
 of the repository. In this example, the scan was free because the full scan above had already asked about these four
-methods, and Perch Cloud returned the cached answers. To ignore the cache and ask again, use `--force`.
+methods, and the endpoint returned the cached answers. To ignore the cache and ask again, use `--force`.
 
 To scan more than one path, pass a comma-separated list to `--paths`:
 

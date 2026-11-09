@@ -1,4 +1,4 @@
-/** Local CLI defaults. Credentials live in the environment or the separate cloud login file. */
+/** Local CLI defaults: the endpoint, its model, and the two Cloud-era scope settings kept readable so an existing file still loads. */
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';

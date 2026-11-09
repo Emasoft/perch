@@ -113,57 +113,6 @@ This reads the file off disk, so it works on uncommitted code. It records nothin
 it will not move the numbers on the issue you are fixing. It exits `3` while something
 is still wrong.
 
-## CI results
-
-Perch Cloud keeps the results of every CI scan. After `perch login`, read them instead
-of scanning again.
-
-```console
-$ perch ci
-ID                                    Commit   Pull request  Result               When
-043812ac-ea68-4c3b-88f0-737328f62826  5d7b033  #320          clean                23h ago
-edf9f510-875c-44c8-8ff1-773e286be26e  a246d74  #320          clean                24h ago
-6323adfc-9440-4640-badf-58c8e61cd5ba  d738e69  #320          4 problems, failing  45h ago
-```
-
-That's this branch's CI runs, newest first, including running ones. Pass a run ID to see
-its issues in the `perch scan` layout:
-
-```console
-$ perch ci 6323adfc-9440-4640-badf-58c8e61cd5ba
-docs/coverage.md
-  ID        Line  Severity  Type  Confidence  Problem                   Method
-  8fd1e766     1  -         lint         72%  docs-sentences-are-short  docs/coverage.md
-
-src/coverage.js
-  ID        Line  Severity  Type    Confidence  Problem             Method
-  8d9306ba   428  P1        defect         71%  wrong_return_value  askCoverage.<anonymous>.build
-  7a5c2d1b   463  P1        defect         68%  wrong_return_value  askCoverage.<anonymous>.build#2
-
-test/test-detection.test.js
-  ID        Line  Severity  Type  Confidence  Problem                     Method
-  69903bef     1  -         lint         61%  tests-assert-real-behavior  test/test-detection.test.…
-
-✖ 4 problems in 3 files, failing
-#320 at d738e69, finished 45h ago: https://dash.perchscan.com/#/scan/6323adfc-9440-4640-badf-58c8e61cd5ba
-```
-
-After a push, `perch ci --wait` waits for the current commit's run to finish and prints
-its issues. It exits like a scan: `3` for failing issues, `1` if the run didn't finish.
-
-On a pull request, each issue also shows the status of Perch's review comment on it:
-`open`, `fixed` after a later scan stopped reporting it, or `resolved`. Replies
-are listed underneath. Read them before changing the code, since a reviewer may already
-have explained why it's right.
-
-Fix CI issues the same way as local ones. With `--json`, each issue's `method` works as a
-`perch check` target, so check the fix and push once it exits `0`.
-
-`perch cloud` shows your workspace and this repository's pull request scan settings:
-whether pull requests are scanned, the issue types, the scope, and whether issues fail
-the Perch Scan check. `perch cloud set` changes them with `--pull_requests`,
-`--scan_types`, `--scope` and `--gate`. Only change them when the user asks.
-
 ## Close a finding
 
 ```console

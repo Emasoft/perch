@@ -39,9 +39,6 @@ With the skill installed, the assistant:
 - Reads the method before changing anything. If the probability is spread across several kinds of bug, the model is
   fairly sure something is wrong but not sure what. If the code is fine, the assistant closes the finding with a reason.
 - Runs `perch check path::method --json` after a fix, to check that one method without saving anything.
-- Uses `perch ci` to see what CI found on the branch, including Perch's review comments on a pull request, and
-  `perch ci --wait` after a push. It fixes CI findings without scanning again.
-- Reads the repository's Perch Cloud settings with `perch cloud`, and only changes them when you ask.
 - Runs `perch coverage --since origin/main` to find changed code that no test checks, and writes the missing tests.
 - Offers to add a rule with `perch rules add` when you correct the same mistake twice, and asks before adding it. It tests
   a new rule on a file that should pass and on a copy with the mistake added. If both get the same answer, the rule isn't

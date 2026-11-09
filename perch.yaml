@@ -43,12 +43,12 @@ rules:
       configuredSystemOne. Passing the unconfigured environment, or omitting
       that client setup from either command, breaks this rule.
   - name: client-honors-api-configuration
-    where: src/cloud-client.js
+    where: src/endpoint.js
     ensure: >-
       When PERCH_BASE_URL is set, scans use PERCH_API_KEY, falling back to
       OPENAI_API_KEY when PERCH_BASE_URL ends in /decisions and to
       TYPESAFE_API_KEY otherwise, and pass PERCH_BASE_URL and PERCH_MODEL_ID to
-      createSystemOne. PERCH_BASE_URL takes precedence over a saved Cloud login.
+      createSystemOne.
   - name: configured-endpoint-is-exact
     where: src/systemone.js
     ensure: >-
@@ -97,7 +97,7 @@ rules:
   - name: closed-never-listed
     where: callers of issues
     ensure: >-
-      Findings this method prints, to stdout or to Perch Cloud, go through
+      Findings this method prints, to stdout, go through
       visibleFindings first, so a closed issue is not listed. Printing findings
       as store.issues or a scan gave them breaks this rule. A method that only
       computes on findings, or returns them to its caller, prints nothing and
@@ -206,9 +206,9 @@ rules:
       it out loud: a noun, or a short verb and noun, such as CI results, Exit
       codes, List this branch's CI runs, or Show one run's issues. One that
       describes its subject with a clause instead of naming it breaks this
-      rule: Read what CI found, Check the tests a change needs, The CI runs
-      Perch Cloud has of the branch, the issues one run found, how it scans
-      this repository. A page with no headings and no table satisfies it.
+      rule: Read what CI found, Check the tests a change needs, The answers a
+      scan gave, the issues one run found, how it scans this repository. A page
+      with no headings and no table satisfies it.
     # Floored at 75. Before the rewrite docs/cli.md read 94% and skill.md 89%; after it, 57% and 66%. Pages with plain headings
     # read up to 74% (docs/scan.md, docs/check.md, README.md), the same as milder real cases like "What a branch changed" (71%).
     min: 75

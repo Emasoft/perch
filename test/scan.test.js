@@ -327,8 +327,8 @@ describe('perch hunt', () => {
     expect(failing.map(issue => issue.label)).toContain('off_by_one');
     expect(failing.map(issue => issue.label)).toContain('too_big');
 
-    // A second run over code nothing has touched asks again. Caching answers is the endpoint's job: Perch Cloud shares them across
-    // a team and CI, which a file in one checkout cannot.
+    // A second run over code nothing has touched asks again. Caching answers is the endpoint's job: a shared endpoint answers the
+    // same question once, which a file in one checkout cannot.
     const untouched = scriptedSystemOne(answers);
     const again = await scanRepository(await withRevision(repo, { systemOne: untouched }));
     expect(again.calls).toBe(4);

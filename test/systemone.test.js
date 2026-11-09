@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AuthenticationError, createSystemOne } from '../src/systemone.js';
 import { createMeter } from '../src/meter.js';
-import { configuredSystemOne } from '../src/cloud-client.js';
-import { FIRST_QUESTIONS } from '../src/endpoint.js';
+import { configuredSystemOne, FIRST_QUESTIONS } from '../src/endpoint.js';
 import { DECISIONS_TOKENS, JEV_TOKENS, tokenLimitsFor } from '../src/tokens.js';
 import { runChecks } from '../src/checks.js';
 
@@ -257,7 +256,7 @@ describe("OpenAI's Decisions API", () => {
     const client = await configuredSystemOne({ env, fetchImpl: async (_, init) => { authorization = init.headers.authorization; return reply(200, decided); } });
     await client.ask({}, questions);
     expect(authorization).toBe('Bearer sk-openai');
-    const checks = await runChecks({ root: process.cwd(), out: '.perch', env, versions: { node: process.version }, credential: 'direct' });
+    const checks = await runChecks({ root: process.cwd(), out: '.perch', env, versions: { node: process.version } });
     expect(checks.find(check => check.name === 'key').found).toBe(`OPENAI_API_KEY, 9 characters, for ${url}`);
   });
 
@@ -276,13 +275,13 @@ describe('token limits by model', () => {
     return { requests, fetchImpl: async (url, init) => { requests.push({ url, init }); return reply(200, { answers: { has_bug: { type: 'noul', noul: 0.5 } } }); } };
   };
 
-  it("sizes the token budget by model: Perch Cloud and gpt-6-luna get Decisions limits, Jev and any other model keep Jev's", () => {
+  it("sizes the token budget by model: gpt-6-luna gets Decisions limits, Jev and any other model keep Jev's", () => {
     const { fetchImpl } = capture();
-    expect(createSystemOne({ apiKey: 'k', fetchImpl, model: 'perch-latest' }).limits).toMatchObject(DECISIONS_TOKENS);
+    expect(createSystemOne({ apiKey: 'k', fetchImpl, model: 'gpt-6-luna' }).limits).toMatchObject(DECISIONS_TOKENS);
     expect(createSystemOne({ apiKey: 'k', fetchImpl, baseUrl: 'https://api.openai.com/v1/decisions' }).limits).toMatchObject(DECISIONS_TOKENS);
     expect(createSystemOne({ apiKey: 'k', fetchImpl, model: 'jev-latest' }).limits).toMatchObject(JEV_TOKENS);
     expect(createSystemOne({ apiKey: 'k', fetchImpl, model: 'd1:free' }).limits).toMatchObject(JEV_TOKENS);
-    expect(createSystemOne({ apiKey: 'k', fetchImpl, model: 'perch-latest', limits: { state: 1000 } }).limits.state).toBe(1000);
+    expect(createSystemOne({ apiKey: 'k', fetchImpl, model: 'gpt-6-luna', limits: { state: 1000 } }).limits.state).toBe(1000);
     expect(tokenLimitsFor('JEV/semif')).toBe(JEV_TOKENS);
     expect(tokenLimitsFor(undefined)).toBe(JEV_TOKENS);
   });

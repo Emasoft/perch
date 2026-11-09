@@ -64,9 +64,9 @@ Perch asks about up to 32 methods at a time. You can change this with `--paralle
 Perch doesn't ask about them unless you pass `--include-tests`. `--paths` controls which files a scan
 covers, and `--since` which methods. Perch asks about every method in that scope.
 
-Each scan replaces `.perch/scan.jsonl` with its answers. Perch Cloud caches answers for each repository. If a request
-matches one it has already answered, it returns the saved answer at no cost. Changing the method, its callers or callees,
-the model, or the wording of any question results in a new request. To ignore the cache, use `--force`.
+Each scan replaces `.perch/scan.jsonl` with its answers. An endpoint that caches answers keeps the saved ones: if a request
+matches one it has already answered, it returns that answer at no cost. Changing the method, its callers or the model, or
+the wording of any question results in a new request. To ignore the cache, use `--force`.
 
 ## 4. The questions
 
@@ -92,7 +92,7 @@ that needs both is sent as two requests. Methods the branch didn't change appear
 ask about them.
 
 Apart from the `--since` request, requests don't include the method's position in its file. This means that adding lines
-above a method doesn't change its request, so Perch Cloud's cached answers still apply.
+above a method doesn't change its request, so an endpoint's cached answers still apply.
 
 If a method is too long to fit in one request, Perch sends it in overlapping parts, each as large as the request limit
 allows, and merges the answers. The worst defect found in any pass is the method's defect, and the likeliest security

@@ -45,7 +45,7 @@ Both are graded on the known bug. The published tools were credited for a line c
 ## Configurations
 
 - `oai2q` is perch#418 at 6e2c92d on OpenAI's Decisions model, `gpt-6-luna`. It asks `has_bug` and `bug_edge_case` of each function the diff changed, over the function and its diff.
-- `jev048` is the released perch 0.4.8, which ships perch#418, on `jev-latest`, the model Perch Cloud answers with.
+- `jev048` is the released perch 0.4.8, which ships perch#418, on `jev-latest`, the model the hosted Jev service answers with.
 - `oai407` is the perch#407 build on the same model. It reads each method twice, once with the change and once with its callers and callees, and asks `review_` questions in each reading.
 - `jev` and `oai` are perch 0.4.7 on Jev and on OpenAI's Decisions model, built at 97e0d74, two fixes after the release. They ask `has_bug` and `bug_edge_case` with each method's callers and callees. `jev-latest` answered as Jev 1.13 for most of the run and Jev 1.14 for part of it.
 

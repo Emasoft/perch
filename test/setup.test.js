@@ -78,8 +78,8 @@ describe('perch setup', () => {
   });
 
   it('writes the skill and nothing else, and the skill mentions no MCP server', async () => {
-    // perch setup used to register Perch Cloud's MCP server in .mcp.json and .cursor/mcp.json. It now writes one file, and a
-    // skill that tells an assistant to connect to a server perch no longer has would send it looking for one.
+    // perch setup used to register an MCP server in .mcp.json and .cursor/mcp.json. It now writes one file, and a skill that
+    // tells an assistant to connect to a server perch no longer has would send it looking for one.
     const root = await repo();
     const done = await installSkill({ root, target: 'claude-code' });
     expect(done).not.toHaveProperty('mcp');

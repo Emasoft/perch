@@ -47,15 +47,16 @@ problem, so you can use it to fail a CI build.
 
 ## Installation
 
-Perch requires Node.js 22 or later and git. Install it with npm, then sign in to Perch Cloud:
+Perch requires Node.js 22 or later and git. Install it with npm, then point it at a model endpoint:
 
 ```sh
 npm install -g @lakeday/perch
-perch login
+export PERCH_BASE_URL=https://api.openai.com/v1/decisions
+export OPENAI_API_KEY='paste-your-key-here'
 ```
 
-By default, Perch sends its questions to a model through Perch Cloud, which bills your organization for usage. You can
-also use your own model endpoint. See [Quick start](/install/) for details.
+Every question a scan asks goes to that endpoint, and its key comes from the variable the endpoint names. See
+[Install](/install/) for the other endpoints and what each one takes.
 
 ## Default checks
 

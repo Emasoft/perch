@@ -55,10 +55,6 @@ describe('cli', () => {
     expect(out.at(-1)).toContain('perch check: Ask about one piece of code, uncommitted');
     expect(out.at(-1)).toContain('--rules');
     expect(out.at(-1)).toContain('PERCH_BASE_URL');
-    // login takes no options, so its help offers none.
-    expect(await main(['login', '-h'], io)).toBe(0);
-    expect(out.at(-1)).toContain('Usage: perch login [organization-id]\n');
-    expect(out.at(-1)).not.toContain('Options:');
     expect(await main(['scan', '-h'], io)).toBe(0);
     expect(out.at(-1)).toContain('perch scan: Find issues');
     expect(out.at(-1)).toContain('PERCH_BASE_URL');
@@ -130,13 +126,14 @@ describe('cli', () => {
     expect(VERSION === 'dev' || /^\d+\.\d+\.\d+$/.test(VERSION) || VERSION.startsWith('DEVELOPMENT')).toBe(true);
   });
 
-  it('needs a Perch Cloud login or key to ask anything, but none to read what it already knows', async () => {
+  it('needs an endpoint and its key to ask anything, but neither to read what it already knows', async () => {
     const repo = await makeFixture();
     cleanups.push(repo);
     const { out, err, io } = capture();
     io.env.HOME = repo;
     expect(await main(['scan', repo], io)).toBe(1);
-    expect(err.join('\n')).toContain('PERCH_API_KEY');
+    // The endpoint comes first: a key is a key for an endpoint, and without one there is nowhere to send it.
+    expect(err.join('\n')).toContain('Perch has no endpoint. Set PERCH_BASE_URL');
     expect(await main(['issues', '--out', join(repo, '.perch')], io)).toBe(0);
     expect(out.at(-1)).toBe('Nothing matches.');
   });
@@ -336,37 +333,12 @@ describe('cli', () => {
     expect(printed.at(-1)).toMatch(new RegExp(`^✖ ${rows.length} problems in 1 file, all failing$`));
   });
 
-  it.each(['scan', 'check'])('%s names itself, its release, its run and its scan on each request to Perch Cloud', async command => {
-    const repo = await realpath(await makeFixture());
-    cleanups.push(repo);
-    vi.spyOn(process, 'cwd').mockReturnValue(repo);
-    const service = scriptedSystemOne({});
-    const named = [], scans = [];
-    vi.stubGlobal('fetch', async (url, init = {}) => {
-      named.push([init.headers?.['x-perch-command'], init.headers?.['x-perch-version'], init.headers?.['x-perch-run']]);
-      if (url.endsWith('/v1/systemone')) scans.push(init.headers['x-perch-scan']);
-      if (url.endsWith('/api/config')) return new Response(JSON.stringify({ model: 'jev-latest' }));
-      if (url.includes('/v1/scans/')) return new Response(JSON.stringify({ id: 'scan' }));
-      const { state, questions } = JSON.parse(init.body);
-      return new Response(JSON.stringify(await service.ask(state, questions)));
-    });
-    const { err, io } = capture();
-    io.env = { HOME: repo, PERCH_API_KEY: 'perch_ci_test' };
-    const args = command === 'scan' ? ['scan', repo] : ['check', 'src/clamp.js::clamp'];
-    expect([0, 3], err.join('\n')).toContain(await main([...args, '--json', '--out', join(repo, '.perch')], io));
-    expect(named.length).toBeGreaterThan(1);
-    expect(named[0][2]).toMatch(/^[0-9a-f-]{36}$/);
-    expect(new Set(named.map(values => values.join(' ')))).toEqual(new Set([`${command} ${VERSION} ${named[0][2]}`]));
-    // A scan's questions name the Cloud scan they belong to. A check starts none.
-    expect(scans.length).toBeGreaterThan(0);
-    expect(new Set(scans)).toEqual(new Set([command === 'scan' ? 'scan' : undefined]));
-  });
-
   it.each([
-    [{ PERCH_API_KEY: 'private-fixture-key' }, 'PERCH_API_KEY, 19 characters, for Perch Cloud'],
     [{ TYPESAFE_API_KEY: 'legacy-fixture-key', PERCH_BASE_URL: 'https://api.typesafe.ai/v1/systemone' }, 'TYPESAFE_API_KEY, 18 characters, for https://api.typesafe.ai/v1/systemone'],
     [{ PERCH_API_KEY: 'private-fixture-key', TYPESAFE_API_KEY: 'legacy-fixture-key', PERCH_BASE_URL: 'https://api.typesafe.ai/v1/systemone' }, 'PERCH_API_KEY, 19 characters, for https://api.typesafe.ai/v1/systemone'],
     [{ PERCH_API_KEY: '', TYPESAFE_API_KEY: 'legacy-fixture-key', PERCH_BASE_URL: 'https://api.typesafe.ai/v1/systemone' }, 'TYPESAFE_API_KEY, 18 characters, for https://api.typesafe.ai/v1/systemone'],
+    // The Decisions endpoint names its own key, so an OPENAI_API_KEY is read with no PERCH_API_KEY set.
+    [{ OPENAI_API_KEY: 'openai-fixture-key', PERCH_BASE_URL: 'https://api.openai.com/v1/decisions' }, 'OPENAI_API_KEY, 18 characters, for https://api.openai.com/v1/decisions'],
   ])('doctor recognizes the configured API key without printing its value (%j)', async (env, found) => {
     const repo = await realpath(await makeFixture());
     cleanups.push(repo);

@@ -233,8 +233,8 @@ If you're writing a rule for whole files, these guidelines help:
 - If a rule scores in the 50s on almost everything, it isn't telling good code from bad. Reword it or remove it instead of
   raising its floor.
 
-When you change a rule's wording, Perch checks it again on the next scan. Unchanged rules on unchanged code are answered
-from Perch Cloud's cache and cost nothing.
+When you change a rule's wording, Perch checks it again on the next scan. Unchanged rules on unchanged code come
+from the endpoint's cache and cost nothing.
 
 ## Cite a reference document
 

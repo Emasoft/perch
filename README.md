@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://perchscan.com">
+  <a href="https://github.com/lakeday-org/perch">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset=".github/logo.svg">
       <img alt="perch" src=".github/logo-light.svg" width="300">
@@ -12,11 +12,10 @@
   <a href="https://github.com/lakeday-org/perch/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/lakeday-org/perch/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://nodejs.org"><img alt="node" src="https://img.shields.io/node/v/@lakeday/perch"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/npm/l/@lakeday/perch"></a>
-  <a href="https://perchscan.com"><img alt="perch" src="https://img.shields.io/badge/perch-lint%20%E2%9C%93%20%C2%B7%20docs%20%E2%9C%93%20%C2%B7%20security%20%E2%9C%93-ffb454?labelColor=1a1d26&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjIgLTIyNiAyNTAgMTYwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9InBlcmNoIj4gPGRlZnM+IDxsaW5lYXJHcmFkaWVudCBpZD0iYiIgeDE9IjAuMiIgeTE9IjAiIHgyPSIwLjU1IiB5Mj0iMSI+IDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmRmOWEiLz4gPHN0b3Agb2Zmc2V0PSI0NSUiIHN0b3AtY29sb3I9IiNmY2I5NWEiLz4gPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZDI4MTFjIi8+IDwvbGluZWFyR3JhZGllbnQ+IDxsaW5lYXJHcmFkaWVudCBpZD0iYlNwaW5lIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+IDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmVhYmEiLz4gPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZTc5YTJjIi8+IDwvbGluZWFyR3JhZGllbnQ+IDwvZGVmcz4gPGc+IDxwYXRoIGQ9Ik04IC03NCBMMTMuMyAtMTA1LjYgUTIyLjMgLTEyNS4zIDMxLjMgLTE2My4zIFE0Mi41IC0xNjMuMyA1My43IC0xOTQuOSBRNjUuOSAtMTgxLjUgNzguMSAtMjA2LjEgUTkwLjkgLTE4NC42IDEwMy44IC0yMDIuMyBRMTE3LjQgLTE3OC4zIDEzMC45IC0xOTEuMiBRMTQ0LjkgLTE2Ni40IDE1OC45IC0xNzQuNCBRMTczLjYgLTE1MSAxODguMiAtMTU0LjkgUTIwMy4zIC0xMzIuNCAyMTguNCAtMTMwLjcgUTIzMy44IC0xMDkuMSAyNDkuMiAtMTAwIEwyMzMgLTc0IFoiIGZpbGw9InVybCgjYikiIGZpbGwtb3BhY2l0eT0iMC43MiIvPiA8cGF0aCBkPSJNOCAtNzQgTDEzLjMgLTEwNS42IFEyMi4zIC0xMjUuMyAzMS4zIC0xNjMuMyBRNDIuNSAtMTYzLjMgNTMuNyAtMTk0LjkgUTY1LjkgLTE4MS41IDc4LjEgLTIwNi4xIFE5MC45IC0xODQuNiAxMDMuOCAtMjAyLjMgUTExNy40IC0xNzguMyAxMzAuOSAtMTkxLjIgUTE0NC45IC0xNjYuNCAxNTguOSAtMTc0LjQgUTE3My42IC0xNTEgMTg4LjIgLTE1NC45IFEyMDMuMyAtMTMyLjQgMjE4LjQgLTEzMC43IFEyMzMuOCAtMTA5LjEgMjQ5LjIgLTEwMCBMMjMzIC03NCBaIiBmaWxsPSJub25lIiBzdHJva2U9IiNlMDk0MmIiIHN0cm9rZS13aWR0aD0iMi4yIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwYXRoIGQ9Ik00LjYgLTc0IEwxMy43IC0xMDggTDExLjQgLTc0IFogTTE3LjUgLTc0IEwzMiAtMTcwIEwyNy4zIC03NCBaIE0zNi42IC03NCBMNTQuNyAtMjA0IEw0OCAtNzQgWiBNNTkgLTc0IEw3OS4xIC0yMTYgTDcxIC03NCBaIE04My43IC03NCBMMTA0LjkgLTIxMiBMOTUuNSAtNzQgWiBNMTEwLjMgLTc0IEwxMzIgLTIwMCBMMTIxLjUgLTc0IFogTTEzOC4zIC03NCBMMTYwLjIgLTE4MiBMMTQ4LjcgLTc0IFogTTE2Ny42IC03NCBMMTg5LjUgLTE2MSBMMTc3IC03NCBaIE0xOTguMSAtNzQgTDIxOS42IC0xMzUgTDIwNi4zIC03NCBaIE0yMjkuNyAtNzQgTDI1MC40IC0xMDIgTDIzNi4zIC03NCBaIiBmaWxsPSJ1cmwoI2JTcGluZSkiLz4gPC9nPiA8L3N2Zz4="></a>
+  <a href="https://github.com/lakeday-org/perch"><img alt="perch" src="https://img.shields.io/badge/perch-lint%20%E2%9C%93%20%C2%B7%20docs%20%E2%9C%93%20%C2%B7%20security%20%E2%9C%93-ffb454?labelColor=1a1d26&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjIgLTIyNiAyNTAgMTYwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9InBlcmNoIj4gPGRlZnM+IDxsaW5lYXJHcmFkaWVudCBpZD0iYiIgeDE9IjAuMiIgeTE9IjAiIHgyPSIwLjU1IiB5Mj0iMSI+IDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmRmOWEiLz4gPHN0b3Agb2Zmc2V0PSI0NSUiIHN0b3AtY29sb3I9IiNmY2I5NWEiLz4gPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZDI4MTFjIi8+IDwvbGluZWFyR3JhZGllbnQ+IDxsaW5lYXJHcmFkaWVudCBpZD0iYlNwaW5lIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+IDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmVhYmEiLz4gPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZTc5YTJjIi8+IDwvbGluZWFyR3JhZGllbnQ+IDwvZGVmcz4gPGc+IDxwYXRoIGQ9Ik04IC03NCBMMTMuMyAtMTA1LjYgUTIyLjMgLTEyNS4zIDMxLjMgLTE2My4zIFE0Mi41IC0xNjMuMyA1My43IC0xOTQuOSBRNjUuOSAtMTgxLjUgNzguMSAtMjA2LjEgUTkwLjkgLTE4NC42IDEwMy44IC0yMDIuMyBRMTE3LjQgLTE3OC4zIDEzMC45IC0xOTEuMiBRMTQ0LjkgLTE2Ni40IDE1OC45IC0xNzQuNCBRMTczLjYgLTE1MSAxODguMiAtMTU0LjkgUTIwMy4zIC0xMzIuNCAyMTguNCAtMTMwLjcgUTIzMy44IC0xMDkuMSAyNDkuMiAtMTAwIEwyMzMgLTc0IFoiIGZpbGw9InVybCgjYikiIGZpbGwtb3BhY2l0eT0iMC43MiIvPiA8cGF0aCBkPSJNOCAtNzQgTDEzLjMgLTEwNS42IFEyMi4zIC0xMjUuMyAzMS4zIC0xNjMuMyBRNDIuNSAtMTYzLjMgNTMuNyAtMTk0LjkgUTY1LjkgLTE4MS41IDc4LjEgLTIwNi4xIFE5MC45IC0xODQuNiAxMDMuOCAtMjAyLjMgUTExNy40IC0xNzguMyAxMzAuOSAtMTkxLjIgUTE0NC45IC0xNjYuNCAxNTguOSAtMTc0LjQgUTE3My42IC0xNTEgMTg4LjIgLTE1NC45IFEyMDMuMyAtMTMyLjQgMjE4LjQgLTEzMC43IFEyMzMuOCAtMTA5LjEgMjQ5LjIgLTEwMCBMMjMzIC03NCBaIiBmaWxsPSJub25lIiBzdHJva2U9IiNlMDk0MmIiIHN0cm9rZS13aWR0aD0iMi4yIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwYXRoIGQ9Ik00LjYgLTc0IEwxMy43IC0xMDggTDExLjQgLTc0IFogTTE3LjUgLTc0IEwzMiAtMTcwIEwyNy4zIC03NCBaIE0zNi42IC03NCBMNTQuNyAtMjA0IEw0OCAtNzQgWiBNNTkgLTc0IEw3OS4xIC0yMTYgTDcxIC03NCBaIE04My43IC03NCBMMTA0LjkgLTIxMiBMOTUuNSAtNzQgWiBNMTEwLjMgLTc0IEwxMzIgLTIwMCBMMTIxLjUgLTc0IFogTTEzOC4zIC03NCBMMTYwLjIgLTE4MiBMMTQ4LjcgLTc0IFogTTE2Ny42IC03NCBMMTg5LjUgLTE2MSBMMTc3IC03NCBaIE0xOTguMSAtNzQgTDIxOS42IC0xMzUgTDIwNi4zIC03NCBaIE0yMjkuNyAtNzQgTDI1MC40IC0xMDIgTDIzNi4zIC03NCBaIiBmaWxsPSJ1cmwoI2JTcGluZSkiLz4gPC9nPiA8L3N2Zz4="></a>
 </p>
 
 <p align="center">
-  <a href="https://perchscan.com">perchscan.com</a> &nbsp;&middot;&nbsp;
   <a href="https://docs.perchscan.com">docs</a> &nbsp;&middot;&nbsp;
   <a href=".benchmarks">benchmarks</a> &nbsp;&middot;&nbsp;
   <a href="https://discord.gg/znTcuKRK">Discord</a>
@@ -33,13 +32,14 @@ Semantic code and security scanner.
 
 ```sh
 npm install -g @lakeday/perch
-perch login
+export PERCH_BASE_URL=https://api.openai.com/v1/decisions
+export OPENAI_API_KEY='paste-your-key-here'
 perch scan
 ```
 
-`perch login` signs you in to [Perch Cloud](https://perchscan.com), where the first $5 is free. Since decisions are cached,
-running perch again on unchanged code is free. Perch Cloud also scans pull requests in CI, without writing
-any workflows.
+A scan sends its questions to the endpoint in `PERCH_BASE_URL`, and to nowhere else. Its key is the one `PERCH_API_KEY` names:
+`OPENAI_API_KEY` for [OI]'s Decisions API, `TYPESAFE_API_KEY` for any other. Code decisions are what a decision model is trained
+for, and the [models](#models) below are the ones perch has been measured on.
 
 ```console
 $ perch scan
@@ -123,8 +123,8 @@ identifying it.
 
 ## Models
 
-By default, Perch Cloud routes your questions to the best model for answering them. To ask a specific decision model,
-override the endpoint, key, and model:
+Questions go to `PERCH_BASE_URL`, and its key is the variable `PERCH_API_KEY` names: `OPENAI_API_KEY` when the URL ends in
+`/decisions`, `TYPESAFE_API_KEY` otherwise. `PERCH_MODEL_ID` asks a specific model:
 
 ```sh
 export PERCH_BASE_URL=https://api.typesafe.ai/v1/systemone
@@ -136,20 +136,19 @@ export PERCH_MODEL_ID=jev-latest
 | --- | --- | --- |
 | [Jev](https://docs.typesafe.ai/models) | `https://api.typesafe.ai/v1/systemone` | `jev-latest` |
 | [Liquid AI d1](https://docs.liquid.ai/lfm/models/decision-models) | `https://api.liquid.ai/decisions/v1/systemone` | `d1:free` |
-| [OpenAI gpt-6-luna](https://developers.openai.com/api/docs/guides/decisions) | `https://api.openai.com/v1/decisions` | `gpt-6-luna` |
+| [[OI] gpt-6-luna](https://developers.openai.com/api/docs/guides/decisions) | `https://api.openai.com/v1/decisions` | `gpt-6-luna` |
 | [DiffusionGemma Jev](https://github.com/razorback16/openjev) on Beam | `https://app.beam.cloud/v1/models/jev/diffusiongemma/invoke` | `jev/diffusiongemma` |
 | [SemiF](https://github.com/TheoLeeCJ/SemIf) on Beam | `https://app.beam.cloud/v1/models/jev/semif/invoke` | `jev/semif` |
 
-Any endpoint that supports the System One format will work, and so does OpenAI's Decisions API: perch recognizes a
-`PERCH_BASE_URL` ending in `/decisions` and reads its key from `OPENAI_API_KEY` when `PERCH_API_KEY` is not set. Each model gets as many questions per request as it says it
-takes. For a model that doesn't say, set `PERCH_MAX_QUESTIONS`. See the
+Any endpoint that speaks the System One format works, and [OI]'s Decisions API speaks it too. Each model gets as many questions
+per request as it says it takes; for a model that doesn't say, set `PERCH_MAX_QUESTIONS`. See the
 [benchmarks](https://huggingface.co/datasets/perchscan/benchmark-results) for a comparison.
 
 ## Documentation
 
 | | |
 | --- | --- |
-| [Getting started](https://docs.perchscan.com/install/) | Install, sign in, the first scan. |
+| [Getting started](https://docs.perchscan.com/install/) | Install, set the endpoint, the first scan. |
 | [Reading issues](https://docs.perchscan.com/issues/) | The list, the filters, closing what does not matter. |
 | [Semantic linting](https://docs.perchscan.com/rules/) | `where`, `each`, `sees`, `context`, `min`, `gate`, and the longhand grammar. |
 | [Checking a change](https://docs.perchscan.com/check/) | `perch check` on work in progress. |

@@ -17,8 +17,6 @@ perch <command> [options]
 
 | Command | Description | Needs |
 | --- | --- | --- |
-| [`login`](#perch-login) | Sign in to Perch Cloud. | a browser |
-| [`logout`](#perch-logout) | Remove this device's Perch Cloud login. | nothing |
 | [`scan`](#perch-scan) | Scan the repository at `HEAD` and save the issues. | [a model endpoint](#environment) |
 | [`coverage`](#perch-coverage) | Run your tests against mutated code and list the gaps. | a model endpoint and your test tools |
 | [`issues`](#perch-issues) | List the issues the last scan found, or show one. | nothing |
@@ -27,34 +25,9 @@ perch <command> [options]
 | [`close`](#perch-close) | Close issues. | nothing |
 | [`reopen`](#perch-reopen) | Reopen closed issues. | nothing |
 | [`setup`](#perch-setup) | Install the Perch skill for a coding assistant. | nothing |
-| [`ci`](#perch-ci) | List this branch's CI runs, or show one run's issues. | `perch login`, or a CI token in `PERCH_API_KEY` |
-| [`cloud`](#perch-cloud) | Show or change this repository's Perch Cloud settings. | `perch login` |
 | [`doctor`](#perch-doctor) | Check that Perch can run, and report on the last run. | nothing |
 
-Commands that need a model endpoint use Perch Cloud by default. You can sign in with `perch login`, a CI token or a GitHub
-Actions OIDC token, or set `PERCH_BASE_URL` to use a different endpoint. See [Environment](#environment).
-
-Every command accepts `--json`, which prints the same information as JSON. Commands that read or write results accept
-`--out DIR`, which defaults to `.perch`. To see a command's options, run `perch <command> --help`. `perch findings` is another
-name for `perch issues`.
-
-## perch login
-
-```
-perch login [organization-id]
-```
-
-Prints a link and a code to confirm in your browser, then saves the login to `~/.perch/cloud.json`, outside the
-repository. If your account belongs to more than one organization, Perch lists them and asks you to run `perch login <id>`
-with the one you want.
-
-## perch logout
-
-```
-perch logout
-```
-
-Removes the login saved on this device. To revoke a CI token, use the Perch Cloud dashboard.
+Commands that need a model endpoint send their questions to `PERCH_BASE_URL`. See [Environment](#environment).
 
 ## perch scan
 
@@ -81,7 +54,7 @@ callees. Custom rules and other types of question are asked in the usual request
 | `--include-tests` | Also review test code and test helpers. |
 | `--include-files` | Also parse documents, configuration, styles and templates with their own grammars. |
 | `--parallel N` | How many methods to ask about at once. Default 32. Files and tests run 32 at a time alongside them. |
-| `--force` | Ask again instead of using Perch Cloud's cached answers, and replace the cached answers. |
+| `--force` | Ask again instead of using the endpoint's cached answers, and replace the cached answers. |
 | `--min P` | List only issues Perch is more than P percent sure of. Default 50. `--min 0` lists everything. |
 | `--all` | List every row instead of the top 10. |
 | `--out DIR` | Results directory. Default `.perch`. |
@@ -147,7 +120,7 @@ doesn't save its results. It exits with code 3 if anything it checked is still b
 | Flag | Description |
 | --- | --- |
 | `--rules a,b` | Ask only these: rule names, or `defect`, `security`, `refactor`, `docs`. |
-| `--force` | Ask again instead of using Perch Cloud's cached answers. |
+| `--force` | Ask again instead of using the endpoint's cached answers. |
 | `--out DIR` | Results directory. Default `.perch`. |
 | `--json` | Print JSON instead of the table. |
 | `--verbose` | Show every file, method, model call and command. |
@@ -245,86 +218,14 @@ or an older Perch wrote it, Perch leaves it alone and exits with code 2.
 
 [perch in a coding assistant](/skill/) lists what the skill tells the assistant to do.
 
-## perch ci
-
-```
-perch ci [run-id] [options]
-```
-
-Lists this branch's CI runs in Perch Cloud, newest first, including runs still in progress:
-
-```console
-$ perch ci
-ID                                    Commit   Pull request  Result               When
-043812ac-ea68-4c3b-88f0-737328f62826  5d7b033  #320          clean                23h ago
-edf9f510-875c-44c8-8ff1-773e286be26e  a246d74  #320          clean                24h ago
-6323adfc-9440-4640-badf-58c8e61cd5ba  d738e69  #320          4 problems, failing  45h ago
-```
-
-With a run ID, it shows that run's issues in the same layout as `perch scan`:
-
-```console
-$ perch ci 6323adfc-9440-4640-badf-58c8e61cd5ba
-docs/coverage.md
-  ID        Line  Severity  Type  Confidence  Problem                   Method
-  8fd1e766     1  -         lint         72%  docs-sentences-are-short  docs/coverage.md
-
-src/coverage.js
-  ID        Line  Severity  Type    Confidence  Problem             Method
-  8d9306ba   428  P1        defect         71%  wrong_return_value  askCoverage.<anonymous>.build
-  7a5c2d1b   463  P1        defect         68%  wrong_return_value  askCoverage.<anonymous>.build#2
-
-test/test-detection.test.js
-  ID        Line  Severity  Type  Confidence  Problem                     Method
-  69903bef     1  -         lint         61%  tests-assert-real-behavior  test/test-detection.test.…
-
-✖ 4 problems in 3 files, failing
-#320 at d738e69, finished 45h ago: https://dash.perchscan.com/#/scan/6323adfc-9440-4640-badf-58c8e61cd5ba
-```
-
-On a pull request, each issue also shows the state of Perch's review comment on it: `open`, `fixed` when a later
-scan stopped reporting it, or `resolved` once someone resolves the thread. Replies are listed underneath. With `--json`, each issue's
-`method` works as a `perch check` target.
-
-`perch ci` uses your `perch login` and the repository named by the `origin` remote. A CI token in `PERCH_API_KEY` also
-works, but sees only its own repository's finished runs. With a run ID, it exits with the run's result: 3 if the run found
-failing issues, and 1 if the run didn't finish.
-
-| Flag | Description |
-| --- | --- |
-| `--wait` | Wait for the current commit's run, or the named run, to finish, then print its issues. Gives up if no run starts within 10 minutes. |
-| `--json` | Print JSON instead of the table. |
-
-## perch cloud
-
-```
-perch cloud [set] [options]
-```
-
-Shows your account, your workspace, and this repository's pull request settings in Perch Cloud: whether the GitHub app is
-installed, whether pull requests are scanned, which types of problem are asked about, whether Perch reads the changed code
-or the whole repository, and whether issues fail the Perch Scan check. The repository is the one the `origin` remote
-names.
-
-`perch cloud set` changes the settings you pass and leaves the rest. It needs a workspace admin signed in with
-`perch login`. A CI token can't read or change settings.
-
-| Flag | Description |
-| --- | --- |
-| `--pull_requests yes\|no` | Whether Perch Cloud scans this repository's pull requests. |
-| `--scan_types a,b` | Types of problem to ask about: `defect`, `security`, `lint`, `refactor`, `docs`. |
-| `--scope changes\|all` | Scan the changed code or the whole repository. |
-| `--gate yes\|no` | Whether issues fail the Perch Scan check on a pull request. |
-| `--json` | Print JSON instead of a summary. |
-
 ## perch doctor
 
 ```
 perch doctor [options]
 ```
 
-Checks that Perch can run here: Node, credentials, git, the repository and commit, the results directory, and whether
-`perch.yaml` parses. A failed check says how to fix it, and the command exits with code 1.
+Checks that Perch can run here: Node, the endpoint and its key, git, the repository and commit, the results directory, and
+whether `perch.yaml` parses. A failed check says how to fix it, and the command exits with code 1.
 
 Below that, it reports on the last run: every method it couldn't read and the error, every question it asked and what each
 one raised, and the end of `.perch/scan.log` if the run didn't finish. The report contains names, paths, counts and error
@@ -332,22 +233,20 @@ messages but no source code, so you can paste it into a bug report.
 
 ## Environment
 
-Perch sends scan, coverage and check requests to Perch Cloud unless `PERCH_BASE_URL` names another endpoint. Without
-`PERCH_BASE_URL`, it signs in to Perch Cloud with the first of these it finds: a CI token in `PERCH_API_KEY`, the login
-saved by `perch login`, or a GitHub Actions job's OIDC token when the job has `id-token: write`.
+Perch sends scan, coverage and check requests to `PERCH_BASE_URL` and reads its key from the variable that endpoint names:
+`OPENAI_API_KEY` when the URL ends in `/decisions`, `TYPESAFE_API_KEY` otherwise, and `PERCH_API_KEY` when it is set. There is no
+default endpoint and no sign-in; a machine that sets neither variable is one perch cannot ask anything.
 
 | Variable | Description |
 | --- | --- |
-| `PERCH_API_KEY` | A Perch Cloud CI token, or your key for `PERCH_BASE_URL`. |
-| `PERCH_BASE_URL` | Another endpoint to send questions to, as the exact URL to POST to. A URL ending in `/decisions` is OpenAI's Decisions API. |
-| `PERCH_MODEL_ID` | The model to ask. Defaults to the model Perch Cloud serves, `gpt-6-luna` on the Decisions API, or `jev-latest` on any other endpoint. |
+| `PERCH_BASE_URL` | The endpoint to send questions to, as the exact URL to POST to. Required. A URL ending in `/decisions` is [OI]'s Decisions API. |
+| `PERCH_API_KEY` | The key for `PERCH_BASE_URL`, whichever endpoint it is. |
+| `PERCH_MODEL_ID` | The model to ask. Defaults to `gpt-6-luna` on the Decisions API, or `jev-latest` on any other endpoint. |
 | `OPENAI_API_KEY` | The Decisions API key, when `PERCH_API_KEY` is not set. |
 | `TYPESAFE_API_KEY` | The key for any other `PERCH_BASE_URL`, when `PERCH_API_KEY` is not set. |
 | `PERCH_MAX_QUESTIONS` | The most questions to send in one request, for a `PERCH_BASE_URL` model that doesn't report its limit. |
 | `PERCH_MAX_OPTIONS` | The most options in one choice question, for the same kind of model. |
 | `PERCH_CONTEXT_LENGTH` | The tokens one request may hold, over the model's own limit. Past 64k on TypeSafe, it turns Jev's long context on. |
-| `PERCH_ORGANIZATION` | The Perch Cloud organization to use, when your login belongs to several. |
-| `PERCH_REPOSITORY` | The Perch Cloud repository ID, in place of the one the `origin` remote names. |
 
 Perch uses `PERCH_BASE_URL` exactly as given, including its path, query string and any trailing slash. To use TypeSafe
 System One:
@@ -382,33 +281,31 @@ its first request to eight questions and sizes later requests to fit. For a mode
 `PERCH_MAX_QUESTIONS`.
 
 How much code goes in one request also depends on the model: about 24k tokens of a method and its neighbours for Jev, whose
-requests take 64k, and about 200k for OpenAI's Decisions API and for Perch Cloud. Any other model gets Jev's budget.
+requests take 64k, and about 200k for [OI]'s Decisions API. Any other model gets Jev's budget.
 `PERCH_CONTEXT_LENGTH` sets the size of one request yourself; the code gets 80% of it, and the code plus any one question
 96%. A context length past 64k on TypeSafe sends the `TypeSafe-Danger-Zone-Long-Context` header, which raises Jev's limits
 to 262k. TypeSafe says that is slower and less accurate, so Perch never turns it on unless you set the length.
 
 ### Configuration file
 
-`~/.perch/config.toml` sets defaults for this machine. It accepts four settings, each a quoted string:
+`~/.perch/config.toml` sets defaults for this machine. It accepts two settings, each a quoted string:
 
 ```toml
-organization = "your-organization-id"
-repository = "your-repository-id"
 base_url = "https://api.typesafe.ai/v1/systemone"
 model = "jev-latest"
 ```
 
-They set `PERCH_ORGANIZATION`, `PERCH_REPOSITORY`, `PERCH_BASE_URL` and `PERCH_MODEL_ID`. An environment variable
-overrides the file.
+They set `PERCH_BASE_URL` and `PERCH_MODEL_ID`. An environment variable overrides the file. A file that still carries
+`organization` or `repository` loads as before, and those two are ignored.
 
 ## Exit codes
 
 | Code | Meaning |
 | --- | --- |
 | `0` | The command finished and found nothing that fails it. |
-| `1` | The command failed. A scan that couldn't read some methods or rules after retrying exits with 1, and so does `perch ci` for a run that didn't finish, and `perch doctor` when a check fails. |
+| `1` | The command failed. A scan that couldn't read some methods or rules after retrying exits with 1, and so does `perch doctor` when a check fails. |
 | `2` | The command line was wrong, or `perch setup` needs `--force` to replace a file you edited. |
-| `3` | `scan`, `check`, `coverage`, or a CI run shown by `perch ci`, found something that fails it. |
+| `3` | `scan`, `check` or `coverage` found something that fails it. |
 
 A scan asks about defects and custom rules unless `scan_types` in `perch.yaml` lists other types, and any problem it lists
 makes it exit with 3. A rule with `gate: false` is still listed, but doesn't change the exit code.

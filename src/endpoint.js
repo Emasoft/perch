@@ -1,8 +1,8 @@
-/** What an endpoint takes in one request, and which variable holds its key. Shared by the client that asks over it. */
-import { speaksDecisions } from './systemone.js';
+/** Where questions go, and with which credential: PERCH_BASE_URL and the key named in this file's environment. */
+import { createSystemOne, speaksDecisions } from './systemone.js';
 import { contextLimits } from './tokens.js';
 
-/** The variable holding the key for a PERCH_BASE_URL: PERCH_API_KEY, else OPENAI_API_KEY for the Decisions API and TYPESAFE_API_KEY for any other. */
+/** The variable holding the key for PERCH_BASE_URL: PERCH_API_KEY, else OPENAI_API_KEY for the Decisions API and TYPESAFE_API_KEY for any other. */
 export const endpointKey = env => (env.PERCH_API_KEY ? 'PERCH_API_KEY' : speaksDecisions(env.PERCH_BASE_URL) ? 'OPENAI_API_KEY' : 'TYPESAFE_API_KEY');
 
 /**
@@ -24,3 +24,19 @@ export function limitsFrom(env) {
 
 /** The first request to an endpoint that has not said what it takes. Small enough for any model we know of; its answer says the rest. */
 export const FIRST_QUESTIONS = 8;
+
+/**
+ * The client scan, coverage and check ask their questions over. The endpoint is PERCH_BASE_URL and its key is the variable for it
+ * that endpointKey names, so a scan that says which endpoint it read can be repeated by naming the same two.
+ *
+ * Both are checked here, before anything is read, because the alternative is a scan that parses a repository and then has nowhere
+ * to send the result.
+ */
+export async function configuredSystemOne({ env, log, fetchImpl = globalThis.fetch }) {
+  if (!env.PERCH_BASE_URL) throw new Error('Perch has no endpoint. Set PERCH_BASE_URL to the URL its questions go to — [OI]\'s Decisions API is https://api.openai.com/v1/decisions — and PERCH_API_KEY to that endpoint\'s key.');
+  const key = endpointKey(env);
+  if (!env[key]) throw new Error(`${key} is not set. It holds the key for ${env.PERCH_BASE_URL}.`);
+  const limits = limitsFrom(env);
+  return createSystemOne({ apiKey: env[key], baseUrl: env.PERCH_BASE_URL, model: env.PERCH_MODEL_ID, log, fetchImpl,
+    limits, firstQuestions: limits.questions ?? FIRST_QUESTIONS });
+}

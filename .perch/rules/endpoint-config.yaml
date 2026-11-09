@@ -1,0 +1,8 @@
+# Which commands read ~/.perch/config.toml, and which must not. A scan's result is its exit code, and nothing is reported anywhere else.
+- name: local-commands-skip-endpoint-config
+  where: src/cli.js
+  ensure: >-
+    Read main. ~/.perch/config.toml is read only for the commands that
+    reach a model: scan, coverage and check. Reading it before every
+    command, so that a broken file fails perch issues or perch close,
+    breaks this rule.

@@ -5,7 +5,7 @@
 - A heading names a task or a thing: CI results, Exit codes, perch scan, Show one run's issues.
 - A heading is never a question, such as What it writes or Why use this.
 - A heading is never a sentence or a fragment of prose, such as Code perch does not read or Answers that are not yes-or-no.
-- A heading never describes its subject with a clause, such as Read what CI found or The CI runs Perch Cloud has of the branch.
+- A heading never describes its subject with a clause, such as Read what CI found or How the parser reads a file.
 - Descriptions in a table follow the same rules.
 
 ## Sentence length
