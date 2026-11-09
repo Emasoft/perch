@@ -11,7 +11,7 @@
 import { access, constants, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseQuestions } from './ask.js';
-import { endpointKey } from './cloud-client.js';
+import { endpointKey } from './endpoint.js';
 import { git } from './git.js';
 import { RULES_FILE } from './units.js';
 

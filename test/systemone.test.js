@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { AuthenticationError, createSystemOne } from '../src/systemone.js';
 import { createMeter } from '../src/meter.js';
-import { configuredSystemOne, FIRST_QUESTIONS } from '../src/cloud-client.js';
+import { configuredSystemOne } from '../src/cloud-client.js';
+import { FIRST_QUESTIONS } from '../src/endpoint.js';
 import { DECISIONS_TOKENS, JEV_TOKENS, tokenLimitsFor } from '../src/tokens.js';
 import { runChecks } from '../src/checks.js';
 
