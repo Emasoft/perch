@@ -164,9 +164,6 @@ whether pull requests are scanned, the issue types, the scope, and whether issue
 the Perch Scan check. `perch cloud set` changes them with `--pull_requests`,
 `--scan_types`, `--scope` and `--gate`. Only change them when the user asks.
 
-`perch setup` also connects the assistant to Perch Cloud's MCP server, `perch-cloud`,
-which has the same results and settings.
-
 ## Close a finding
 
 ```console

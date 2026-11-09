@@ -14,7 +14,6 @@ on the results. To set it up, run `perch setup` with the name of your assistant 
 ```console
 $ perch setup claude-code
 Wrote .claude/skills/perch/SKILL.md for Claude Code.
-Added Perch Cloud's MCP server to .mcp.json. Claude Code signs in to it through Perch Cloud, in your browser.
 ```
 
 Perch supports four assistants. Each one reads the instructions from a different file:
@@ -25,18 +24,6 @@ Perch supports four assistants. Each one reads the instructions from a different
 | `codex` | `.codex/skills/perch/SKILL.md` |
 | `pi` | `.pi/skills/perch/SKILL.md` |
 | `cursor` | `.cursor/rules/perch.mdc` |
-
-`perch setup` also adds Perch Cloud's MCP server, `perch-cloud`, at `https://dash.perchscan.com/mcp`. The server lets
-the assistant read your CI runs, their findings, and Perch's review comments on a pull request, including replies:
-
-| Assistant | Where the server is added |
-| --- | --- |
-| `claude-code` | `.mcp.json` |
-| `cursor` | `.cursor/mcp.json` |
-| `codex` | Perch prints `codex mcp add perch-cloud --url https://dash.perchscan.com/mcp` for you to run. |
-
-The assistant signs in to the server through Perch Cloud in your browser, so these files don't contain any credentials.
-Without the server, the assistant can still read the same CI runs with `perch ci`.
 
 We recommend committing these files so that everyone working on the repository uses the same instructions.
 
@@ -68,7 +55,6 @@ ships:
 ```console
 $ perch setup claude-code
 .claude/skills/perch/SKILL.md is already there; perch setup claude-code --force replaces it
-.mcp.json already has Perch Cloud's MCP server.
 ```
 
 In this case, `perch setup` exits with code 2. A file written by an older version of Perch also counts as different, so

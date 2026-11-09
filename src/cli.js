@@ -15,10 +15,10 @@ import { BELIEVED, filterKeys, filterStrength, matchesFilters, parseFilters } fr
 import { splitStale } from './context.js';
 import { changedPaths, readRuleFiles, readRules, RULES_FILE, RULES_DIR, UNIT_PARALLEL } from './units.js';
 import { checkTarget } from './check.js';
+import { installSkill, TARGET_NAMES, TARGETS } from './setup.js';
 import { runChecks } from './checks.js';
 import { addRule, editRule, KINDS as RULE_KINDS, removeRule, ruleFile } from './rules.js';
 import { allQuestions, parseQuestions, questionSet, SHAPES } from './ask.js';
-import { installSkill, registerMcp, TARGET_NAMES, TARGETS } from './setup.js';
 import { createCloud, running, SCAN_TYPES, waitForRun } from './ci.js';
 import { createMeter, metered } from './meter.js';
 import { coverageFindings, coverageRepository, withoutSource } from './coverage.js';
@@ -103,7 +103,7 @@ const commandHelp = {
   cloud: { args: '[set]', summary: 'Show or change this repository\'s Perch Cloud scan settings', detail: `Shows your account, your workspace, and this repository's pull request scan settings: whether pull requests are scanned, the issue types, the scope (changed code or the whole repository), and whether issues fail the Perch Scan check.\n\nperch cloud set changes the settings. Anything you leave out stays the same. It needs a workspace admin.\n\n  perch cloud set --scan_types defect,security,lint --scope changes --gate yes\n\nNeeds perch login; a CI token can't read or change settings.` },
   close: { args: '<issue-id>...', summary: 'Set issues aside', detail: 'Stops an issue being listed: a false positive, or code you have looked at and are not changing. An id perch coverage printed closes that problem, and later coverage runs leave it out. --reason is kept and shown by perch issues <id>. It stays closed through later scans and later edits, and perch reopen is the only thing that brings it back.\n\nIt covers the kinds on that issue now, so a defect found in the method later is a new thing and is listed. --kind closes some of them and leaves the rest:\n\n  perch close 2638fb16 --kind docs' },
   reopen: { args: '<issue-id>...', summary: 'Put closed issues back', detail: 'Undoes perch close, all of it, or the kinds --kind names.' },
-  setup: { args: `<${TARGET_NAMES.join(' | ')}>`, summary: 'Teach a coding assistant to use perch', detail: `Writes the perch skill into the assistant's configuration, so it knows to scan what a branch changed, to read the JSON rather than the table, that a finding is a probability rather than a located defect, to ask about one method after a fix, and to write a rule when the same mistake comes back.\n\n${Object.entries(TARGETS).map(([name, target]) => `  perch setup ${name}`.padEnd(28) + target.path).join('\n')}\n\nThe file can be edited once written: perch will not replace an edited one unless you pass --force.\n\nIt also adds Perch Cloud's MCP server, which reads CI runs and Perch's review comments on a pull request, to .mcp.json for Claude Code and .cursor/mcp.json for Cursor, and prints the command that adds it to Codex. The assistant signs in to it through Perch Cloud, in a browser, so nothing secret is written.` },
+  setup: { args: `<${TARGET_NAMES.join(' | ')}>`, summary: 'Teach a coding assistant to use perch', detail: `Writes the perch skill into the assistant's configuration, so it knows to scan what a branch changed, to read the JSON rather than the table, that a finding is a probability rather than a located defect, to ask about one method after a fix, and to write a rule when the same mistake comes back.\n\n${Object.entries(TARGETS).map(([name, target]) => `  perch setup ${name}`.padEnd(28) + target.path).join('\n')}\n\nThe file can be edited once written: perch will not replace an edited one unless you pass --force.` },
   doctor: { args: '', summary: 'Check perch can run, and what the last run did', detail: 'Whether perch can run here: node, credentials, Git, the repository and commit, somewhere to write, and whether perch.yaml parses. Anything that fails says what to do about it, and the command exits 1.\n\nUnder that, the last run: every method it could not read with the error, every question it asked and what each raised, and the end of the log when a run did not finish. Names, paths, counts and error messages only, never source, so it can be pasted into a bug report as it stands.' },
 };
 
@@ -744,12 +744,8 @@ const commands = {
     if (!target) throw new UsageError(`perch setup takes ${TARGET_NAMES.join(', ')}`);
     const root = await repoRoot(process.cwd()).catch(() => process.cwd());
     const done = await installSkill({ root, target, force: Boolean(io.flags.force) });
-    done.mcp = await registerMcp({ root, target });
-    const mcp = done.mcp.registered ? `Added Perch Cloud's MCP server to ${done.mcp.path}. ${done.name} signs in to it through Perch Cloud, in your browser.`
-      : done.mcp.already ? `${done.mcp.path} already has Perch Cloud's MCP server.`
-        : done.mcp.why ?? (done.mcp.command ? `To let ${done.name} read Perch Cloud's CI runs, run: ${done.mcp.command}` : null);
-    const said = [done.wrote ? `${done.replaced ? 'Replaced' : 'Wrote'} ${done.path} for ${done.name}.`
-      : done.same ? `${done.path} is already this skill.` : done.why, mcp].filter(Boolean).join('\n');
+    const said = done.wrote ? `${done.replaced ? 'Replaced' : 'Wrote'} ${done.path} for ${done.name}.`
+      : done.same ? `${done.path} is already this skill.` : done.why;
     print(io, done, said);
     return done.wrote || done.same ? EXIT.clean : EXIT.usage;
   },

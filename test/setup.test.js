@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { installSkill, registerMcp, TARGET_NAMES, TARGETS } from '../src/setup.js';
+import { installSkill, TARGET_NAMES, TARGETS } from '../src/setup.js';
 
 const cleanups = [];
 afterEach(async () => { for (const dir of cleanups.splice(0)) await rm(dir, { recursive: true, force: true }); });
@@ -77,6 +77,16 @@ describe('perch setup', () => {
     expect(await read(TARGETS['claude-code'].path), 'run perch setup claude-code --force').toBe(await read('skill.md'));
   });
 
+  it('writes the skill and nothing else, and the skill mentions no MCP server', async () => {
+    // perch setup used to register Perch Cloud's MCP server in .mcp.json and .cursor/mcp.json. It now writes one file, and a
+    // skill that tells an assistant to connect to a server perch no longer has would send it looking for one.
+    const root = await repo();
+    const done = await installSkill({ root, target: 'claude-code' });
+    expect(done).not.toHaveProperty('mcp');
+    expect(await readFile(join(root, '.mcp.json'), 'utf8').catch(error => error.code)).toBe('ENOENT');
+    expect(await readFile(join(root, done.path), 'utf8')).not.toMatch(/MCP|mcp/i);
+  });
+
   it('refuses an assistant it does not know, and names the ones it does', async () => {
     const root = await repo();
     await expect(installSkill({ root, target: 'emacs' })).rejects.toThrow(/claude-code, codex, pi, cursor/);
@@ -95,24 +105,5 @@ describe('perch setup', () => {
     // And a finding is a belief about a method rather than a defect pinned to a line.
     expect(skill).toMatch(/adjacent/i);
     expect(skill).toMatch(/does not locate a\s+defect/);
-  });
-
-  it('adds Perch Cloud\'s MCP server beside a project\'s other servers, and leaves an existing entry or a broken file alone', async () => {
-    const root = await repo();
-    await writeFile(join(root, '.mcp.json'), JSON.stringify({ mcpServers: { other: { command: 'other' } } }));
-    expect(await registerMcp({ root, target: 'claude-code' })).toEqual({ registered: true, path: '.mcp.json' });
-    // The assistant signs in to it through Perch Cloud, so the file holds an address and nothing secret.
-    expect(JSON.parse(await readFile(join(root, '.mcp.json'), 'utf8')).mcpServers)
-      .toEqual({ other: { command: 'other' }, 'perch-cloud': { type: 'http', url: 'https://dash.perchscan.com/mcp' } });
-    expect(await registerMcp({ root, target: 'claude-code' })).toEqual({ registered: false, already: true, path: '.mcp.json' });
-    expect(await registerMcp({ root, target: 'cursor' })).toEqual({ registered: true, path: '.cursor/mcp.json' });
-    expect(JSON.parse(await readFile(join(root, '.cursor/mcp.json'), 'utf8')))
-      .toEqual({ mcpServers: { 'perch-cloud': { url: 'https://dash.perchscan.com/mcp' } } });
-    expect(await registerMcp({ root, target: 'codex' })).toEqual({ registered: false, command: 'codex mcp add perch-cloud --url https://dash.perchscan.com/mcp' });
-    expect(await registerMcp({ root, target: 'pi' })).toEqual({ registered: false, command: null });
-    const broken = await repo();
-    await writeFile(join(broken, '.mcp.json'), '{ not json');
-    expect((await registerMcp({ root: broken, target: 'claude-code' })).registered).toBe(false);
-    expect(await readFile(join(broken, '.mcp.json'), 'utf8')).toBe('{ not json');
   });
 });

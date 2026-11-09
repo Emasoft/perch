@@ -14,3 +14,6 @@ perch.yaml.*.tmp
 
 # Benchmark data, downloaded from Hugging Face (see .benchmarks/*/README.md).
 .benchmarks/hf/
+
+# The janitor's per-session detector state, written under the project root and never part of the repository.
+.janitor/

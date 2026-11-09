@@ -235,10 +235,6 @@ Installs the Perch skill for a coding assistant in the current repository:
 | `pi` | `.pi/skills/perch/SKILL.md` |
 | `cursor` | `.cursor/rules/perch.mdc` |
 
-It also adds Perch Cloud's MCP server, `perch-cloud` at `https://dash.perchscan.com/mcp`, to `.mcp.json` for Claude Code
-and `.cursor/mcp.json` for Cursor. For Codex, it prints the `codex mcp add` command to run. An existing `perch-cloud`
-entry is left as it is.
-
 If the skill file matches the one this version of Perch ships, Perch changes nothing. If it differs, because you edited it
 or an older Perch wrote it, Perch leaves it alone and exits with code 2.
 
