@@ -11,7 +11,7 @@
 import { access, constants, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseQuestions } from './ask.js';
-import { endpointKey } from './endpoint.js';
+import { baseUrlFrom, endpointCredential, endpointKey } from './endpoint.js';
 import { git } from './git.js';
 import { RULES_FILE } from './units.js';
 
@@ -33,13 +33,14 @@ export async function runChecks({ root, out, env, versions }) {
     ? ok('node', versions.node)
     : bad('node', versions.node, `perch needs node ${NEEDS_NODE} or newer`));
 
-  // Which variable holds the key scans will use, and never its value.
-  const keyName = endpointKey(env);
-  checks.push(env.PERCH_BASE_URL
-    ? (env[keyName]
-      ? ok('key', `${keyName}, ${env[keyName].length} characters, for ${env.PERCH_BASE_URL}`)
-      : bad('key', 'PERCH_BASE_URL is set and no key is', `set PERCH_API_KEY to that endpoint's key`))
-    : bad('key', 'PERCH_BASE_URL is not set', 'set PERCH_BASE_URL to the URL a scan sends its questions to'));
+  // Which credential scans will use, and never its value. A machine signed in to Codex has one without a key of its own.
+  const baseUrl = baseUrlFrom(env);
+  let credential = null, credentialError = null;
+  try { credential = await endpointCredential(env); } catch (error) { credentialError = error; }
+  checks.push(credentialError ? bad('key', credentialError.message, 'run codex login again, or set PERCH_API_KEY')
+    : credential?.from === 'the Codex sign-in' ? ok('key', `the Codex sign-in, for ${baseUrl}`)
+      : credential ? ok('key', `${credential.from}, ${credential.key.length} characters, for ${baseUrl}`)
+        : bad('key', `no key for ${baseUrl}`, `set ${endpointKey(env)} to that endpoint's key, or run codex login`));
 
   const version = await git(['--version'], root).then(text => text.trim()).catch(error => error);
   checks.push(typeof version === 'string'
@@ -77,3 +78,4 @@ export async function runChecks({ root, out, env, versions }) {
 }
 
 const relativeTo = (root, inside) => (root === inside ? inside : `${inside} (you are in ${root})`);
+

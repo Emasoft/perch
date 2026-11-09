@@ -1,9 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { configuredSystemOne, endpointKey, FIRST_QUESTIONS, limitsFrom } from '../src/endpoint.js';
 
 const DECISIONS = 'https://api.openai.com/v1/decisions';
 const SYSTEM_ONE = 'https://api.typesafe.ai/v1/systemone';
 const reply = data => new Response(JSON.stringify(data));
+
+// A machine Codex signed in to, or one it did not, which is what tells the two credential paths apart. Every test that reaches
+// a client names its own, so the suite does not depend on whether the machine running it happens to be signed in.
+const homes = [];
+afterEach(async () => {
+  for (const home of homes.splice(0)) await rm(home, { recursive: true, force: true });
+});
+async function codexHome(signedIn) {
+  const home = await mkdtemp(join(tmpdir(), 'perch-codex-'));
+  homes.push(home);
+  if (signedIn) await writeFile(join(home, 'auth.json'), JSON.stringify({ tokens: { access_token: 'codex-token', account_id: 'acct-codex' } }));
+  return home;
+}
 
 describe('the variable holding the endpoint key', () => {
   it('is PERCH_API_KEY when it is set, whichever endpoint PERCH_BASE_URL names', () => {
@@ -56,18 +72,53 @@ describe('configuredSystemOne', () => {
     expect(FIRST_QUESTIONS).toBe(8);
   });
 
-  it('says there is no endpoint before anything is read, rather than after a repository is parsed', async () => {
-    const nothingSent = async () => { throw new Error('unexpected request'); };
-    await expect(configuredSystemOne({ env: {}, fetchImpl: nothingSent })).rejects.toThrow('Perch has no endpoint. Set PERCH_BASE_URL');
-    await expect(configuredSystemOne({ env: { PERCH_BASE_URL: '' }, fetchImpl: nothingSent })).rejects.toThrow('Perch has no endpoint');
+  it('asks the Decisions API when PERCH_BASE_URL says nothing, which is where gpt-6-luna is', async () => {
+    const sent = [];
+    const client = await configuredSystemOne({ env: { CODEX_HOME: await codexHome(true) }, fetchImpl: async url => {
+      sent.push(String(url));
+      return reply({ model: 'gpt-6-luna', answers: [{ type: 'predicate', name: 'a', probability: 0.2 }] });
+    } });
+    await client.ask({ code: 'a' }, { a: { type: 'noul', criteria: { true: 'yes', false: 'no' } } });
+    expect(sent).toEqual([DECISIONS]);
   });
 
   it('names the variable the key belongs in, which depends on the endpoint', async () => {
+    const signedOut = { CODEX_HOME: await codexHome(false) };
     const nothingSent = async () => { throw new Error('unexpected request'); };
-    await expect(configuredSystemOne({ env: { PERCH_BASE_URL: DECISIONS }, fetchImpl: nothingSent }))
-      .rejects.toThrow(`OPENAI_API_KEY is not set. It holds the key for ${DECISIONS}.`);
-    await expect(configuredSystemOne({ env: { PERCH_BASE_URL: SYSTEM_ONE }, fetchImpl: nothingSent }))
-      .rejects.toThrow(`TYPESAFE_API_KEY is not set. It holds the key for ${SYSTEM_ONE}.`);
+    await expect(configuredSystemOne({ env: { ...signedOut, PERCH_BASE_URL: DECISIONS }, fetchImpl: nothingSent }))
+      .rejects.toThrow("Set OPENAI_API_KEY to that endpoint's key");
+    await expect(configuredSystemOne({ env: { ...signedOut, PERCH_BASE_URL: SYSTEM_ONE }, fetchImpl: nothingSent }))
+      .rejects.toThrow("Set TYPESAFE_API_KEY to that endpoint's key");
+  });
+
+  it('spends the Codex sign-in on the Decisions API, and says whose plan it spends', async () => {
+    // A subscription is an [OI] credential like any other, so a machine signed in to Codex needs no API key of its own. The
+    // account travels as chatgpt-account-id, the header Codex sends.
+    const sent = [];
+    const client = await configuredSystemOne({ env: { CODEX_HOME: await codexHome(true) }, fetchImpl: async (url, options) => {
+      sent.push({ url: String(url), auth: options.headers.authorization, account: options.headers['chatgpt-account-id'] });
+      return reply({ model: 'gpt-6-luna', answers: [{ type: 'predicate', name: 'a', probability: 0.2 }] });
+    } });
+    await client.ask({ code: 'a' }, { a: { type: 'noul', criteria: { true: 'yes', false: 'no' } } });
+    expect(sent).toEqual([{ url: DECISIONS, auth: 'Bearer codex-token', account: 'acct-codex' }]);
+  });
+
+  it('keeps the sign-in to [OI], since a token no other endpoint issued is not offered to it', async () => {
+    const nothingSent = async () => { throw new Error('unexpected request'); };
+    const env = { CODEX_HOME: await codexHome(true), PERCH_BASE_URL: SYSTEM_ONE };
+    await expect(configuredSystemOne({ env, fetchImpl: nothingSent })).rejects.toThrow('Set TYPESAFE_API_KEY');
+  });
+
+  it('prefers a key in the variable the endpoint names, which was set for this shell on purpose', async () => {
+    const sent = [];
+    const env = { CODEX_HOME: await codexHome(true), OPENAI_API_KEY: 'sk-key' };
+    const client = await configuredSystemOne({ env, fetchImpl: async (_, options) => {
+      sent.push({ auth: options.headers.authorization, account: options.headers['chatgpt-account-id'] });
+      return reply({ model: 'gpt-6-luna', answers: [{ type: 'predicate', name: 'a', probability: 0.2 }] });
+    } });
+    await client.ask({ code: 'a' }, { a: { type: 'noul', criteria: { true: 'yes', false: 'no' } } });
+    // A key is not scoped to an account, so there is none to name.
+    expect(sent).toEqual([{ auth: 'Bearer sk-key', account: undefined }]);
   });
 
   it('sends its questions to PERCH_BASE_URL and nowhere else, so another endpoint is a setting rather than a build', async () => {

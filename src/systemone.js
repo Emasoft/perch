@@ -73,6 +73,8 @@ const DECISIONS = {
 
 export function createSystemOne({
   apiKey,
+  // The subscription the token belongs to, when it is one: the Decisions API is told whose plan to spend, as Codex tells it.
+  accountId,
   model,
   fetchImpl = globalThis.fetch,
   baseUrl = 'https://api.typesafe.ai/v1/systemone',
@@ -90,7 +92,9 @@ export function createSystemOne({
   limits = { ...TOKEN_LIMITS, ...tokenLimitsFor(model), ...limits };
   // Jev gives a request more than its default 64k only when asked with this header, which turns its long context on.
   const longContext = wire === SYSTEM_ONE && /(^|\.)typesafe\.ai$/i.test(new URL(baseUrl, 'https://invalid.test').hostname) && limits.request > JEV_TOKENS.request;
-  const headers = { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json', ...(longContext ? { 'TypeSafe-Danger-Zone-Long-Context': 'true' } : {}) };
+  // A subscription token names the account whose plan it spends, and Codex sends it as this header. An API key spends its own
+  // account directly and has none to send.
+  const headers = { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json', ...(accountId ? { 'chatgpt-account-id': accountId } : {}), ...(longContext ? { 'TypeSafe-Danger-Zone-Long-Context': 'true' } : {}) };
   let authenticationFailure = null, answered = false, opening = null;
 
   /**

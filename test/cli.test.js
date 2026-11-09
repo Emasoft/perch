@@ -126,14 +126,14 @@ describe('cli', () => {
     expect(VERSION === 'dev' || /^\d+\.\d+\.\d+$/.test(VERSION) || VERSION.startsWith('DEVELOPMENT')).toBe(true);
   });
 
-  it('needs an endpoint and its key to ask anything, but neither to read what it already knows', async () => {
+  it('needs a key to ask anything, but not to read what it already knows', async () => {
     const repo = await makeFixture();
     cleanups.push(repo);
     const { out, err, io } = capture();
     io.env.HOME = repo;
     expect(await main(['scan', repo], io)).toBe(1);
-    // The endpoint comes first: a key is a key for an endpoint, and without one there is nowhere to send it.
-    expect(err.join('\n')).toContain('Perch has no endpoint. Set PERCH_BASE_URL');
+    // The default endpoint is [OI]'s Decisions API, so what is missing is a key or a Codex sign-in, and the message says both.
+    expect(err.join('\n')).toContain("Perch has no key for https://api.openai.com/v1/decisions. Set OPENAI_API_KEY to that endpoint's key, or run codex login");
     expect(await main(['issues', '--out', join(repo, '.perch')], io)).toBe(0);
     expect(out.at(-1)).toBe('Nothing matches.');
   });
