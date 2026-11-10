@@ -12,7 +12,7 @@ import { access, constants, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseQuestions } from './ask.js';
 import { baseUrlFrom, endpointCredential, endpointKey } from './endpoint.js';
-import { localModelName, mlxDecisionPath } from './local.js';
+import { isLoopback, localModelName, mlxDecisionPath, sharedServer } from './local.js';
 import { speaksDecisions } from './systemone.js';
 import { git } from './git.js';
 import { RULES_FILE } from './units.js';
@@ -27,7 +27,7 @@ const bad = (name, found, fix) => ({ name, ok: false, found, fix });
  * Every check, in the order they stop mattering. An endpoint you have not configured makes the rest moot, so it comes first; a rule file that
  * does not parse only matters once perch can run at all.
  */
-export async function runChecks({ root, out, env, versions }) {
+export async function runChecks({ root, out, env, versions, fetchImpl, ps }) {
   const checks = [];
 
   const major = Number(String(versions.node).replace(/^v/, '').split('.')[0]);
@@ -47,7 +47,7 @@ export async function runChecks({ root, out, env, versions }) {
   // Where a run goes after the endpoint refuses one. Always ok: perch runs without a fallback, and a machine where the local
   // model was never installed can still read a repository. What it is not is silent, since a spent subscription window is the
   // ordinary way to arrive here.
-  checks.push(await fallbackCheck({ env, baseUrl, platform: versions.platform }));
+  checks.push(await fallbackCheck({ env, baseUrl, platform: versions.platform, fetchImpl, ps }));
 
   const version = await git(['--version'], root).then(text => text.trim()).catch(error => error);
   checks.push(typeof version === 'string'
@@ -94,14 +94,19 @@ const relativeTo = (root, inside) => (root === inside ? inside : `${inside} (you
  * with the command that installs it, because the fallback is on by default and a machine that cannot complete one should say so
  * before a spent subscription window is the way anyone finds out.
  */
-async function fallbackCheck({ env, baseUrl, platform }) {
+async function fallbackCheck({ env, baseUrl, platform, fetchImpl, ps }) {
   const asked = localModelName(env);
   if (!asked) return ok('fallback', 'off, so a run the endpoint refuses stops there');
   if (!speaksDecisions(baseUrl)) return ok('fallback', `not for ${baseUrl}; the Decisions API is the endpoint that falls back`);
   if (platform !== 'darwin arm64') return ok('fallback', `none: mlx-decision runs on Apple silicon, and this is ${platform}`);
+  // What a run connects to: a server already answering, when there is one, rather than a binary that would start a second. The
+  // probe is the same one a run makes, so doctor cannot say one thing and a scan do another.
+  if (env.PERCH_LOCAL_URL && !isLoopback(env.PERCH_LOCAL_URL)) return bad('fallback', `PERCH_LOCAL_URL names another machine`, 'set PERCH_LOCAL_URL to this machine, or unset it');
+  const running = await sharedServer({ env, model: asked.name, fetchImpl, ps });
+  if (running) return ok('fallback', `${asked.name} already serving at ${running.baseUrl}`);
   const bin = await mlxDecisionPath(env);
   return bin
-    ? ok('fallback', `${asked.name} from ${bin}`)
+    ? ok('fallback', `${asked.name} from ${bin}, starting one only if nothing is already serving`)
     : bad('fallback', `${asked.name} is not installed`, 'uv tool install mlx-decision, or set PERCH_LOCAL_MODEL=off to do without it');
 }
 

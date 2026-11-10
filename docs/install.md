@@ -29,9 +29,10 @@ Perch asks a model about your code. A scan goes to `PERCH_BASE_URL` if you set o
 where `gpt-6-luna` answers. Either credential works there: a ChatGPT subscription signed in with
 `codex login`, or an `OPENAI_API_KEY`.
 
-If the Decisions API refuses a run because the subscription window is spent or the account is out of credit, and `perch
-doctor` says the local model is installed, the scan reads with elephant-1 on this machine instead and says so. mlx-decision
-serves it, downloads the model on first use, and runs on Apple silicon. Install it with `uv tool install mlx-decision`, or
+If the Decisions API refuses a run because the subscription window is spent or the account is out of credit, the scan reads
+with elephant-1 on this machine instead and says so. mlx-decision serves it, downloads the model on first use, and runs on
+Apple silicon. A server already running is used rather than replaced by a second one — one copy of the model holds several
+gigabytes — and one is started only when no server is there. Install mlx-decision with `uv tool install mlx-decision`, or
 set `PERCH_LOCAL_MODEL=off` to do without the fallback.
 
 To point a scan at another endpoint, set `PERCH_BASE_URL` to it and `PERCH_API_KEY` to its key. To use TypeSafe's System One:

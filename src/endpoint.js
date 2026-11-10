@@ -5,7 +5,7 @@
 import { createSystemOne, speaksDecisions } from './systemone.js';
 import { codexCredential } from './codex-auth.js';
 import { contextLimits } from './tokens.js';
-import { installArgs, localModelName, mlxDecisionPath, startLocalModel, trackForExit } from './local.js';
+import { installArgs, isLoopback, localModelName, mlxDecisionPath, sharedServer, startLocalModel, trackForExit } from './local.js';
 
 /** [OI]'s Decisions API: where a scan goes when nothing says otherwise, and gpt-6-luna is the model perch was measured on. */
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1/decisions';
@@ -107,12 +107,25 @@ async function run(argv, { spawn }) {
  * Installing is a separate act from scanning, and it is refused when nobody is there to answer for it: a CI runner that reached
  * this branch would download a model onto a machine whose owner never asked, and the run has already failed visibly by then.
  */
-export async function localClient({ env, log = () => {}, spawn, fetchImpl, tty = Boolean(process.stdin.isTTY) }) {
+export async function localClient({ env, log = () => {}, spawn, fetchImpl, tty = Boolean(process.stdin.isTTY), ps }) {
   const asked = localModelName(env);
   if (!asked) return null;
   // mlx-decision runs on Apple silicon. Somewhere else there is no local model to fall back to, and saying so is better than a
   // stack trace from a spawn that could never have worked.
   if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error(`there is no local ${asked.name} on ${process.platform}/${process.arch}; mlx-decision runs on Apple silicon`);
+  // The server this machine is already serving, before anything is installed or started: one server holds the whole model, so
+  // a fallback that starts a second beside a running one is the failure this code exists to prevent. A named url outside this
+  // machine is refused rather than posted to: adopting a server means sending it repository code, and only this machine is one
+  // the user decided to serve that on.
+  if (env.PERCH_LOCAL_URL && !isLoopback(env.PERCH_LOCAL_URL)) {
+    throw new Error(`PERCH_LOCAL_URL must name this machine; ${env.PERCH_LOCAL_URL} does not, and perch will not send code to a server it did not choose`);
+  }
+  const running = await sharedServer({ env, model: asked.name, fetchImpl, ps });
+  if (running) {
+    log(`a server for ${asked.name} is already running at ${running.baseUrl}; using it`);
+    // No stop: a server perch did not start belongs to the machine, and is not perch's to stop at exit.
+    return createSystemOne({ apiKey: 'local', baseUrl: running.baseUrl, model: asked.name, log, fetchImpl });
+  }
   let bin = await mlxDecisionPath(env);
   if (!bin) {
     const argv = installArgs({ uv: env.PERCH_UV_BIN || 'uv', pipx: env.PERCH_PIPX_BIN || 'pipx' });
@@ -122,7 +135,7 @@ export async function localClient({ env, log = () => {}, spawn, fetchImpl, tty =
     bin = await mlxDecisionPath(env);
     if (!bin) throw new Error(`mlx-decision was installed but is not on the PATH; set MLX_DECISION_BIN to it`);
   }
-  const server = await startLocalModel({ bin, model: asked.name, repo: asked.repo, log, spawn, fetchImpl });
+  const server = await startLocalModel({ bin, env, model: asked.name, repo: asked.repo, log, spawn, fetchImpl });
   trackForExit(server);
   // The server perch started keeps no key, since only this process can reach its port; the client still wants a string where the
   // authorization header goes, and it goes unread on the other side.

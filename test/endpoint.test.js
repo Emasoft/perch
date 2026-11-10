@@ -189,6 +189,21 @@ describe('falling back to the local model', () => {
     expect(logged.join('\n')).toContain('falling back to elephant-1');
   });
 
+  it('uses the server this machine is already running, and spawns nothing', async () => {
+    // One server holds the whole model, so a fallback that starts a second beside a running one doubles the memory of a
+    // machine that already answered. Nothing is started, nothing is stopped at exit: the server is not perch's.
+    const started = [];
+    const client = await configuredSystemOne({
+      env: await signedIn(), tty: false,
+      fetchImpl: async url => (String(url).endsWith('/health')
+        ? new Response(JSON.stringify({ status: 'ok', model: 'elephant-1', loaded: ['elephant-1'] }))
+        : String(url).includes('127.0.0.1') ? reply({ model: 'elephant-1', answers: { a: { noul: 0.2 } } }) : quota()),
+      spawn: (...argv) => { started.push(argv); return fakeServer(5100); },
+    });
+    expect(client.id).toBe('elephant-1');
+    expect(started).toEqual([]);
+  });
+
   it('does not fall back when the key is rejected, which is a five-second fix the user has to see', async () => {
     // 401 is not an endpoint that cannot answer; it is a key that does not work. Demoting every later scan to a local model
     // instead would hide the message and the fix with it.
@@ -219,6 +234,14 @@ describe('falling back to the local model', () => {
     // chasing the wrong half of a two-part problem.
     await expect(configuredSystemOne({ env: { ...(await signedIn()), MLX_DECISION_BIN: '/nowhere/mlx-decision' }, fetchImpl: down, tty: false }))
       .rejects.toThrow('fetch failed. mlx-decision is not installed');
+  });
+
+  it('refuses a PERCH_LOCAL_URL that names another machine, rather than sending code to it', async () => {
+    // Adopting a server means posting repository code to whatever answers there. Only this machine is one the user decided
+    // to serve that on; anywhere else is a request perch was never asked to make.
+    await expect(configuredSystemOne({
+      env: { ...(await signedIn()), PERCH_LOCAL_URL: 'http://10.0.0.5:8123/v1/systemone' }, fetchImpl: down, tty: false,
+    })).rejects.toThrow('PERCH_LOCAL_URL must name this machine');
   });
 
   it('will not install a model on a machine nobody is sitting at', async () => {

@@ -275,16 +275,19 @@ describe("OpenAI's Decisions API", () => {
 
 describe('what doctor says about the fallback', () => {
   // The fallback is on by default, so a machine that cannot complete one should hear about it before a spent subscription window
-  // is how it finds out. Nothing here starts a server: doctor is a check, not a several-gigabyte download.
+  // is how it finds out. Nothing here starts or reaches a server: doctor is a check, not a several-gigabyte download, and not a
+  // probe of whatever this machine happens to be serving. The machines these tests describe have no server, so the fetch finds
+  // nothing and the ps table is empty.
   const fallbackIn = async (env, platform = 'darwin arm64') =>
-    (await runChecks({ root: process.cwd(), out: '.perch', env, versions: { node: process.version, platform } })).find(check => check.name === 'fallback');
+    (await runChecks({ root: process.cwd(), out: '.perch', env, versions: { node: process.version, platform },
+      fetchImpl: async () => { throw Object.assign(new Error('fetch failed'), { code: 'ECONNREFUSED' }); }, ps: async () => '' })).find(check => check.name === 'fallback');
 
   it('names the binary it would start, so the answer says which mlx-decision perch will run', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'perch-doctor-'));
     try {
       const bin = join(dir, 'mlx-decision');
       await writeFile(bin, '#!/bin/sh\n', { mode: 0o755 });
-      expect(await fallbackIn({ MLX_DECISION_BIN: bin })).toMatchObject({ ok: true, found: `elephant-1 from ${bin}` });
+      expect(await fallbackIn({ MLX_DECISION_BIN: bin })).toMatchObject({ ok: true, found: `elephant-1 from ${bin}, starting one only if nothing is already serving` });
     } finally { await rm(dir, { recursive: true, force: true }); }
   });
 

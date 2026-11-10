@@ -246,6 +246,8 @@ place of a key.
 | `OPENAI_API_KEY` | The Decisions API key, when `PERCH_API_KEY` is not set. A `codex login` does without it. |
 | `TYPESAFE_API_KEY` | The key for any other `PERCH_BASE_URL`, when `PERCH_API_KEY` is not set. |
 | `PERCH_LOCAL_MODEL` | The model to fall back to on this machine when the Decisions API refuses a run. Defaults to `elephant-1`, served by mlx-decision; `off` turns the fallback off. |
+| `PERCH_LOCAL_URL` | The server to fall back to, instead of looking for one running on this machine. Must name this machine (`127.0.0.1`), since adopting a server means sending it code. |
+| `PERCH_LOCAL_PORT` | The port to look for a server on, and to start one on when there is none. Defaults to 8123, the port a shared server runs on; 8000, the mlx-decision default, is also looked at. |
 | `MLX_DECISION_BIN` | Where mlx-decision is, when it is not on the `PATH` or in `~/.local/bin`. |
 | `PERCH_MAX_QUESTIONS` | The most questions to send in one request, for a `PERCH_BASE_URL` model that doesn't report its limit. |
 | `PERCH_MAX_OPTIONS` | The most options in one choice question, for the same kind of model. |
@@ -266,9 +268,11 @@ connection that never opened. A rejected key, a refused request and a request to
 make in a minute, and a local reading would hide the message while quietly demoting every later scan to a model holding a
 fraction as much context.
 
-The fallback starts mlx-decision on `127.0.0.1`, waits for it to answer and stops it when Perch exits. Its first run downloads
-the model, several gigabytes, which is why `perch doctor` reports whether it is installed rather than downloading one on your
-behalf. Install it with `uv tool install mlx-decision`; it runs on Apple silicon. A scan read with it holds about 16k tokens of
+The fallback connects to a server already running on this machine and starts one only when there is none: elephant-1 holds
+several gigabytes of weights, so a second copy beside a running one is the one thing the fallback is built to avoid. A server
+it finds is left alone when Perch exits; one it starts is stopped. The first run downloads the model, which is why `perch
+doctor` reports whether it is installed rather than downloading one on your behalf. Install it with `uv tool install
+mlx-decision`; it runs on Apple silicon. A scan read with it holds about 16k tokens of
 a method where the Decisions API holds 250k, so a scan that fell back read less. Set `PERCH_LOCAL_MODEL=off` to turn the
 fallback off, and Perch then stops at the endpoint's error.
 

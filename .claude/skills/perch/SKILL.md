@@ -231,11 +231,13 @@ where perch was measured.
 
 If a run fails because the subscription window is spent or the account is out of credit, the scan
 reads with elephant-1 on this machine instead, served by mlx-decision, and prints which model
-answered. `perch doctor` says whether that fallback is installed. A scan that fell back read about
+If a run fails because the subscription window is spent or the account is out of credit, the scan
+reads with elephant-1 on this machine instead, served by mlx-decision, and prints which model
+answered. A server already running is used rather than replaced by a second one — one copy of the
+model holds several gigabytes — and one is started only when no server is there. `perch doctor` says
+whether that fallback is installed. A scan that fell back read about
 16k tokens of each method where the Decisions API holds 250k, so treat its findings as the weaker
 reading they are.
-
-`PERCH_BASE_URL` names another endpoint, which opts out of that default, and `PERCH_MODEL_ID` the
 model. Nothing falls back from an endpoint you named.
 
 ## Other commands
