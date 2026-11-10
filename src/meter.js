@@ -9,6 +9,9 @@ export const PRICES = {
   jev: { input: 0.042, output: 0 },
   d1: { input: 0, output: 0 },
   'gpt-6-luna': { input: 0.1, output: 0 },
+  // Served on this machine, so nothing is billed for it. Named anyway, so a run on the fallback reads $0.0000 rather than
+  // "price unknown", which would look like a missing price instead of a free answer.
+  'elephant-1': { input: 0, output: 0 },
 };
 
 /** A model nobody published a price for costs an unknown amount, which the summary says rather than guessing. */

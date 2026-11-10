@@ -79,6 +79,9 @@ export function createSystemOne({
   fetchImpl = globalThis.fetch,
   baseUrl = 'https://api.typesafe.ai/v1/systemone',
   retryDelayMs = 2000,
+  // How many times one request is tried. Four is the default because a 429 with a retry-after is a wait; a caller that is asking
+  // once to find out whether the endpoint is there passes 1, so a probe cannot spend the run's first quarter-minute asleep.
+  attempts = 4,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   log = () => {},
   limits = {},
@@ -118,19 +121,21 @@ export function createSystemOne({
         attempted();
         response = await fetchImpl(baseUrl, { method: 'POST', headers, body: JSON.stringify(wire.body(body)) });
       } catch (error) {
-        if (attempt >= 3) throw error;
+        if (attempt >= attempts - 1) throw error;
         log(`${service} request failed (${error.message}); retrying`);
         await sleep(retryDelayMs * 2 ** attempt);
         continue;
       }
       if (response.status === 429 || response.status >= 500) {
-        // OpenAI says an account is out of credit with a 429, which no wait changes, so it stops the run the way a 402 does.
+        // [OI] says an account is out of credit with a 429, which no wait changes, so it stops the run the way a 402 does. A
+        // subscription that has spent its window says the same thing in other words ("Codex usage limit reached"), and treating
+        // only one wording as terminal made the other sleep through three retries and then throw away the body that named it.
         const detail = response.status === 429 ? (await response.text().catch(() => '')).slice(0, 2000) : '';
-        if (/\binsufficient_quota\b/.test(detail)) {
+        if (/\b(?:insufficient_quota|usage_limit_reached|rate_limit_exceeded)\b|usage limit reached|quota exceeded|out of credits?\b/i.test(detail)) {
           authenticationFailure = new AuthenticationError(response.status, detail, service);
           throw authenticationFailure;
         }
-        if (attempt >= 3) throw new Error(`${service} request failed with HTTP ${response.status} after four attempts`);
+        if (attempt >= attempts - 1) throw new Error(`${service} request failed with HTTP ${response.status} after ${attempts} attempts`);
         const retryAfter = Number(response.headers?.get?.('retry-after'));
         log(`${service} returned HTTP ${response.status}; retrying`);
         await sleep(retryAfter > 0 ? retryAfter * 1000 : retryDelayMs * 2 ** attempt);

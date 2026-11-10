@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { AuthenticationError, createSystemOne } from '../src/systemone.js';
 import { createMeter } from '../src/meter.js';
 import { configuredSystemOne, FIRST_QUESTIONS } from '../src/endpoint.js';
@@ -253,7 +256,7 @@ describe("OpenAI's Decisions API", () => {
   it('takes OPENAI_API_KEY when PERCH_API_KEY is not set, and doctor says so', async () => {
     let authorization;
     const env = { PERCH_BASE_URL: url, OPENAI_API_KEY: 'sk-openai', TYPESAFE_API_KEY: 'ts' };
-    const client = await configuredSystemOne({ env, fetchImpl: async (_, init) => { authorization = init.headers.authorization; return reply(200, decided); } });
+    const client = await configuredSystemOne({ env, probe: false, fetchImpl: async (_, init) => { authorization = init.headers.authorization; return reply(200, decided); } });
     await client.ask({}, questions);
     expect(authorization).toBe('Bearer sk-openai');
     const checks = await runChecks({ root: process.cwd(), out: '.perch', env, versions: { node: process.version } });
@@ -269,6 +272,37 @@ describe("OpenAI's Decisions API", () => {
   });
 });
 
+
+describe('what doctor says about the fallback', () => {
+  // The fallback is on by default, so a machine that cannot complete one should hear about it before a spent subscription window
+  // is how it finds out. Nothing here starts a server: doctor is a check, not a several-gigabyte download.
+  const fallbackIn = async (env, platform = 'darwin arm64') =>
+    (await runChecks({ root: process.cwd(), out: '.perch', env, versions: { node: process.version, platform } })).find(check => check.name === 'fallback');
+
+  it('names the binary it would start, so the answer says which mlx-decision perch will run', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'perch-doctor-'));
+    try {
+      const bin = join(dir, 'mlx-decision');
+      await writeFile(bin, '#!/bin/sh\n', { mode: 0o755 });
+      expect(await fallbackIn({ MLX_DECISION_BIN: bin })).toMatchObject({ ok: true, found: `elephant-1 from ${bin}` });
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it('fails with the command that installs it, since that is the one thing between a run and its fallback', async () => {
+    const found = await fallbackIn({ MLX_DECISION_BIN: '/nowhere/mlx-decision' });
+    expect(found.ok).toBe(false);
+    expect(found.fix).toContain('uv tool install mlx-decision');
+  });
+
+  it('says so plainly when the fallback is off on purpose, or when the endpoint is one perch will not substitute for', async () => {
+    expect(await fallbackIn({ PERCH_LOCAL_MODEL: 'off' })).toMatchObject({ ok: true, found: 'off, so a run the endpoint refuses stops there' });
+    expect(await fallbackIn({ PERCH_BASE_URL: 'https://api.typesafe.ai/v1/systemone', PERCH_API_KEY: 'k' })).toMatchObject({ ok: true });
+  });
+
+  it('says there is none where mlx-decision cannot run, rather than failing a check nothing could fix', async () => {
+    expect(await fallbackIn({}, 'linux x64')).toMatchObject({ ok: true, found: 'none: mlx-decision runs on Apple silicon, and this is linux x64' });
+  });
+});
 describe('token limits by model', () => {
   const capture = () => {
     const requests = [];

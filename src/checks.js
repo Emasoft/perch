@@ -12,6 +12,8 @@ import { access, constants, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseQuestions } from './ask.js';
 import { baseUrlFrom, endpointCredential, endpointKey } from './endpoint.js';
+import { localModelName, mlxDecisionPath } from './local.js';
+import { speaksDecisions } from './systemone.js';
 import { git } from './git.js';
 import { RULES_FILE } from './units.js';
 
@@ -41,6 +43,11 @@ export async function runChecks({ root, out, env, versions }) {
     : credential?.from === 'the Codex sign-in' ? ok('key', `the Codex sign-in, for ${baseUrl}`)
       : credential ? ok('key', `${credential.from}, ${credential.key.length} characters, for ${baseUrl}`)
         : bad('key', `no key for ${baseUrl}`, `set ${endpointKey(env)} to that endpoint's key, or run codex login`));
+
+  // Where a run goes after the endpoint refuses one. Always ok: perch runs without a fallback, and a machine where the local
+  // model was never installed can still read a repository. What it is not is silent, since a spent subscription window is the
+  // ordinary way to arrive here.
+  checks.push(await fallbackCheck({ env, baseUrl, platform: versions.platform }));
 
   const version = await git(['--version'], root).then(text => text.trim()).catch(error => error);
   checks.push(typeof version === 'string'
@@ -78,4 +85,23 @@ export async function runChecks({ root, out, env, versions }) {
 }
 
 const relativeTo = (root, inside) => (root === inside ? inside : `${inside} (you are in ${root})`);
+
+/**
+ * Where a run goes once the endpoint has refused one: the same model this machine serves, when the default endpoint is the one
+ * that refused and there is somewhere to serve it from.
+ *
+ * It is only ever reported, never run, so doctor stays a check rather than a several-gigabyte download. Not installed is a ✗
+ * with the command that installs it, because the fallback is on by default and a machine that cannot complete one should say so
+ * before a spent subscription window is the way anyone finds out.
+ */
+async function fallbackCheck({ env, baseUrl, platform }) {
+  const asked = localModelName(env);
+  if (!asked) return ok('fallback', 'off, so a run the endpoint refuses stops there');
+  if (!speaksDecisions(baseUrl)) return ok('fallback', `not for ${baseUrl}; the Decisions API is the endpoint that falls back`);
+  if (platform !== 'darwin arm64') return ok('fallback', `none: mlx-decision runs on Apple silicon, and this is ${platform}`);
+  const bin = await mlxDecisionPath(env);
+  return bin
+    ? ok('fallback', `${asked.name} from ${bin}`)
+    : bad('fallback', `${asked.name} is not installed`, 'uv tool install mlx-decision, or set PERCH_LOCAL_MODEL=off to do without it');
+}
 

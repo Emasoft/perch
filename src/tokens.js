@@ -16,8 +16,10 @@ export const JEV_TOKENS = Object.freeze({ state: 24000, single: 30000, request: 
  * TypeSafe says that is slower and less accurate, so it is only ever chosen (PERCH_CONTEXT_LENGTH), never assumed.
  */
 export const DECISIONS_TOKENS = contextLimits(250000);
+/** Base Labs' elephant-1, served locally by mlx-decision, takes 16,384 input tokens a request: a method that does not fit is reported, never cut. */
+export const ELEPHANT_TOKENS = contextLimits(16000);
 /** Each model's token limits, by the start of its id. A model named here gets its own; any other gets Jev's. */
-export const MODEL_TOKEN_LIMITS = Object.freeze({ jev: JEV_TOKENS, 'gpt-6-luna': DECISIONS_TOKENS });
+export const MODEL_TOKEN_LIMITS = Object.freeze({ jev: JEV_TOKENS, 'gpt-6-luna': DECISIONS_TOKENS, 'elephant-1': ELEPHANT_TOKENS });
 export function tokenLimitsFor(model) {
   const id = String(model ?? '').toLowerCase();
   const prefix = Object.keys(MODEL_TOKEN_LIMITS).filter(start => id.startsWith(start)).sort((a, b) => b.length - a.length)[0];
