@@ -224,10 +224,24 @@ read 84%, 79% and 95% against their broken controls, and passed every clean page
 Aim for a gap that wide. A pass and a fail within a few points of each other means the
 rule needs another pass.
 
+## Where the questions go
+
+Nothing to set on a machine signed in with `codex login`: a scan asks [OI]'s Decisions API, which is
+where perch was measured.
+
+If a run fails because the subscription window is spent or the account is out of credit, the scan
+reads with elephant-1 on this machine instead, served by mlx-decision, and prints which model
+answered. `perch doctor` says whether that fallback is installed. A scan that fell back read about
+16k tokens of each method where the Decisions API holds 250k, so treat its findings as the weaker
+reading they are.
+
+`PERCH_BASE_URL` names another endpoint, which opts out of that default, and `PERCH_MODEL_ID` the
+model. Nothing falls back from an endpoint you named.
+
 ## Other commands
 
 | | |
 | --- | --- |
-| `perch doctor` | Whether perch can run here, and what the last run asked. |
+| `perch doctor` | Whether perch can run here, what it will ask, and what the last run asked. |
 | `perch issues --types` | Everything `--filter` accepts. |
 | `perch --version` | The version in use. |

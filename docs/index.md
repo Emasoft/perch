@@ -47,16 +47,17 @@ problem, so you can use it to fail a CI build.
 
 ## Installation
 
-Perch requires Node.js 22 or later and git. Install it with npm, then point it at a model endpoint:
+Perch requires Node.js 22 or later and git. Install it with npm, then sign in once:
 
 ```sh
 npm install -g @lakeday/perch
-export PERCH_BASE_URL=https://api.openai.com/v1/decisions
-export OPENAI_API_KEY='paste-your-key-here'
+codex login      # or: export OPENAI_API_KEY='paste-your-key-here'
 ```
 
-Every question a scan asks goes to that endpoint, and its key comes from the variable the endpoint names. See
-[Install](/install/) for the other endpoints and what each one takes.
+Every question a scan asks goes to [OI]'s Decisions API unless you name another endpoint in `PERCH_BASE_URL`, and its key
+comes from the variable the endpoint names. A run the Decisions API refuses, because the subscription window is spent or the
+account is out of credit, reads with elephant-1 on this machine instead. See [Install](/install/) for the other endpoints and
+what each one takes.
 
 ## Default checks
 

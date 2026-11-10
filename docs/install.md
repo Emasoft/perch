@@ -25,23 +25,23 @@ To run Perch without installing it, use `npx @lakeday/perch` in place of `perch`
 
 ## Choose a model endpoint
 
-Perch asks a model about your code, and every question goes to the endpoint in `PERCH_BASE_URL`. Its key comes from the
-variable that endpoint names: `OPENAI_API_KEY` for [OI]'s Decisions API, `TYPESAFE_API_KEY` for any other System One endpoint,
-or `PERCH_API_KEY` for either. To use [OI]'s Decisions API:
+Perch asks a model about your code. A scan goes to `PERCH_BASE_URL` if you set one, and otherwise to [OI]'s Decisions API,
+where `gpt-6-luna` answers. Either credential works there: a ChatGPT subscription signed in with
+`codex login`, or an `OPENAI_API_KEY`.
 
-```sh
-export PERCH_BASE_URL=https://api.openai.com/v1/decisions
-export OPENAI_API_KEY='paste-your-key-here'
-```
+If the Decisions API refuses a run because the subscription window is spent or the account is out of credit, and `perch
+doctor` says the local model is installed, the scan reads with elephant-1 on this machine instead and says so. mlx-decision
+serves it, downloads the model on first use, and runs on Apple silicon. Install it with `uv tool install mlx-decision`, or
+set `PERCH_LOCAL_MODEL=off` to do without the fallback.
 
-To use TypeSafe's System One:
+To point a scan at another endpoint, set `PERCH_BASE_URL` to it and `PERCH_API_KEY` to its key. To use TypeSafe's System One:
 
 ```sh
 export PERCH_BASE_URL=https://api.typesafe.ai/v1/systemone
 export PERCH_API_KEY='paste-your-TypeSafe-key-here'
 ```
 
-Either line belongs in your shell profile, or in `~/.perch/config.toml` as `base_url` and `model`. For the other endpoints
+Those lines belong in your shell profile, or in `~/.perch/config.toml` as `base_url` and `model`. For the other endpoints
 and the model each one takes, see [Environment](/cli/#environment).
 
 ## Run your first scan

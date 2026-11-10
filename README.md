@@ -32,14 +32,19 @@ Semantic code and security scanner.
 
 ```sh
 npm install -g @lakeday/perch
-export PERCH_BASE_URL=https://api.openai.com/v1/decisions
-export OPENAI_API_KEY='paste-your-key-here'
+codex login      # or: export OPENAI_API_KEY='paste-your-key-here'
 perch scan
 ```
 
-A scan sends its questions to the endpoint in `PERCH_BASE_URL`, and to nowhere else. Its key is the one `PERCH_API_KEY` names:
-`OPENAI_API_KEY` for [OI]'s Decisions API, `TYPESAFE_API_KEY` for any other. Code decisions are what a decision model is trained
-for, and the [models](#models) below are the ones perch has been measured on.
+A scan sends its questions to `PERCH_BASE_URL` if you set one, and otherwise to [OI]'s Decisions API, which is where perch was
+measured. Its key is the one `PERCH_API_KEY` names: `OPENAI_API_KEY` for the Decisions API, `TYPESAFE_API_KEY` for any other,
+and a ChatGPT subscription signed in with `codex login` works in place of a key on the Decisions API.
+
+If the Decisions API refuses a run because the subscription window is spent or the account is out of credit, the scan reads
+with elephant-1 on this machine instead, served by [mlx-decision](https://github.com/armbues/mlx-decision), and says which
+model answered. `perch doctor` says whether it is installed; `uv tool install mlx-decision` installs it, and
+`PERCH_LOCAL_MODEL=off` turns the fallback off. Code decisions are what a decision model is trained for, and the
+[models](#models) below are the ones perch has been measured on.
 
 ```console
 $ perch scan
@@ -123,8 +128,14 @@ identifying it.
 
 ## Models
 
-Questions go to `PERCH_BASE_URL`, and its key is the variable `PERCH_API_KEY` names: `OPENAI_API_KEY` when the URL ends in
-`/decisions`, `TYPESAFE_API_KEY` otherwise. `PERCH_MODEL_ID` asks a specific model:
+By default a scan asks [OI]'s Decisions API, where `gpt-6-luna` answers and the credential is an `OPENAI_API_KEY` or a
+ChatGPT subscription signed in with `codex login`. If that endpoint refuses a run, perch falls back to
+[elephant-1](https://huggingface.co/baselabs/elephant-1), served on this machine by
+[mlx-decision](https://github.com/armbues/mlx-decision).
+
+The models below are supported and none of them is used unless you name it. Another endpoint is two settings: `PERCH_BASE_URL`
+is the exact URL to POST to and `PERCH_MODEL_ID` the model to ask. The key is the one `PERCH_API_KEY` names, or
+`TYPESAFE_API_KEY` for an endpoint perch does not recognise:
 
 ```sh
 export PERCH_BASE_URL=https://api.typesafe.ai/v1/systemone
@@ -134,15 +145,16 @@ export PERCH_MODEL_ID=jev-latest
 
 | Model | `PERCH_BASE_URL` | `PERCH_MODEL_ID` |
 | --- | --- | --- |
+| [[OI] gpt-6-luna](https://developers.openai.com/api/docs/guides/decisions) (default) | `https://api.openai.com/v1/decisions` | `gpt-6-luna` |
 | [Jev](https://docs.typesafe.ai/models) | `https://api.typesafe.ai/v1/systemone` | `jev-latest` |
 | [Liquid AI d1](https://docs.liquid.ai/lfm/models/decision-models) | `https://api.liquid.ai/decisions/v1/systemone` | `d1:free` |
-| [[OI] gpt-6-luna](https://developers.openai.com/api/docs/guides/decisions) | `https://api.openai.com/v1/decisions` | `gpt-6-luna` |
 | [DiffusionGemma Jev](https://github.com/razorback16/openjev) on Beam | `https://app.beam.cloud/v1/models/jev/diffusiongemma/invoke` | `jev/diffusiongemma` |
 | [SemiF](https://github.com/TheoLeeCJ/SemIf) on Beam | `https://app.beam.cloud/v1/models/jev/semif/invoke` | `jev/semif` |
 
-Any endpoint that speaks the System One format works, and [OI]'s Decisions API speaks it too. Each model gets as many questions
-per request as it says it takes; for a model that doesn't say, set `PERCH_MAX_QUESTIONS`. See the
-[benchmarks](https://huggingface.co/datasets/perchscan/benchmark-results) for a comparison.
+Perch never falls back from an endpoint you named. A local model is not a substitute for the model you chose, and the
+fallback covers the default endpoint only. Any endpoint that speaks the System One format works, and [OI]'s Decisions API
+speaks it too. Each model gets as many questions per request as it says it takes; for a model that doesn't say, set
+`PERCH_MAX_QUESTIONS`. See the [benchmarks](https://huggingface.co/datasets/perchscan/benchmark-results) for a comparison.
 
 ## Documentation
 

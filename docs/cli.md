@@ -27,7 +27,7 @@ perch <command> [options]
 | [`setup`](#perch-setup) | Install the Perch skill for a coding assistant. | nothing |
 | [`doctor`](#perch-doctor) | Check that Perch can run, and report on the last run. | nothing |
 
-Commands that need a model endpoint send their questions to `PERCH_BASE_URL`. See [Environment](#environment).
+Commands that need a model endpoint send their questions to `PERCH_BASE_URL`, or to the Decisions API when it is unset. See [Environment](#environment).
 
 ## perch scan
 
@@ -233,20 +233,44 @@ messages but no source code, so you can paste it into a bug report.
 
 ## Environment
 
-Perch sends scan, coverage and check requests to `PERCH_BASE_URL` and reads its key from the variable that endpoint names:
-`OPENAI_API_KEY` when the URL ends in `/decisions`, `TYPESAFE_API_KEY` otherwise, and `PERCH_API_KEY` when it is set. There is no
-default endpoint and no sign-in; a machine that sets neither variable is one perch cannot ask anything.
+Perch sends scan, coverage and check requests to `PERCH_BASE_URL`, or to [OI]'s Decisions API when that is not set. The key is
+the one the endpoint's own variable holds: `PERCH_API_KEY` when it is set, otherwise `OPENAI_API_KEY` for the Decisions API and
+`TYPESAFE_API_KEY` for any other endpoint. On the Decisions API a ChatGPT subscription, signed in with `codex login`, works in
+place of a key.
 
 | Variable | Description |
 | --- | --- |
-| `PERCH_BASE_URL` | The endpoint to send questions to, as the exact URL to POST to. Required. A URL ending in `/decisions` is [OI]'s Decisions API. |
+| `PERCH_BASE_URL` | The endpoint to send questions to, as the exact URL to POST to. Unset means `https://api.openai.com/v1/decisions`, which is what Perch was measured on; naming another endpoint opts out of that default. A URL ending in `/decisions` is [OI]'s Decisions API. |
 | `PERCH_API_KEY` | The key for `PERCH_BASE_URL`, whichever endpoint it is. |
 | `PERCH_MODEL_ID` | The model to ask. Defaults to `gpt-6-luna` on the Decisions API, or `jev-latest` on any other endpoint. |
-| `OPENAI_API_KEY` | The Decisions API key, when `PERCH_API_KEY` is not set. |
+| `OPENAI_API_KEY` | The Decisions API key, when `PERCH_API_KEY` is not set. A `codex login` does without it. |
 | `TYPESAFE_API_KEY` | The key for any other `PERCH_BASE_URL`, when `PERCH_API_KEY` is not set. |
+| `PERCH_LOCAL_MODEL` | The model to fall back to on this machine when the Decisions API refuses a run. Defaults to `elephant-1`, served by mlx-decision; `off` turns the fallback off. |
+| `MLX_DECISION_BIN` | Where mlx-decision is, when it is not on the `PATH` or in `~/.local/bin`. |
 | `PERCH_MAX_QUESTIONS` | The most questions to send in one request, for a `PERCH_BASE_URL` model that doesn't report its limit. |
 | `PERCH_MAX_OPTIONS` | The most options in one choice question, for the same kind of model. |
 | `PERCH_CONTEXT_LENGTH` | The tokens one request may hold, over the model's own limit. Past 64k on TypeSafe, it turns Jev's long context on. |
+
+The Decisions API is the default because a decision model is what Perch was measured on. Another endpoint is a setting, for the
+model you would rather ask. Perch never falls back from one you named, since a local model is not a substitute for the one you
+chose.
+
+### The fallback on this machine
+
+A subscription window runs out, and that used to end the scan. Now a run the Decisions API refuses reads with
+[elephant-1](https://huggingface.co/baselabs/elephant-1) on this machine instead, served by
+[mlx-decision](https://github.com/armbues/mlx-decision), and the scan says which model answered.
+
+It covers what time does not fix: a spent subscription window, an account out of credit, a service that is down and a
+connection that never opened. A rejected key, a refused request and a request too large are not covered — each is a fix you
+make in a minute, and a local reading would hide the message while quietly demoting every later scan to a model holding a
+fraction as much context.
+
+The fallback starts mlx-decision on `127.0.0.1`, waits for it to answer and stops it when Perch exits. Its first run downloads
+the model, several gigabytes, which is why `perch doctor` reports whether it is installed rather than downloading one on your
+behalf. Install it with `uv tool install mlx-decision`; it runs on Apple silicon. A scan read with it holds about 16k tokens of
+a method where the Decisions API holds 250k, so a scan that fell back read less. Set `PERCH_LOCAL_MODEL=off` to turn the
+fallback off, and Perch then stops at the endpoint's error.
 
 Perch uses `PERCH_BASE_URL` exactly as given, including its path, query string and any trailing slash. To use TypeSafe
 System One:
@@ -264,17 +288,10 @@ export PERCH_API_KEY='paste-your-Liquid-key-here'
 export PERCH_MODEL_ID=d1:free
 ```
 
-To use OpenAI's [Decisions API](https://developers.openai.com/api/docs/guides/decisions):
-
-```sh
-export PERCH_BASE_URL=https://api.openai.com/v1/decisions
-export OPENAI_API_KEY='paste-your-OpenAI-key-here'
-```
-
 Perch translates its questions and answers to and from the Decisions API format when the URL's path ends in `/decisions`.
 
 Any other endpoint must accept the System One format, where typed questions about a piece of code are answered with
-probabilities. An OpenAI-compatible chat endpoint does not accept it.
+probabilities. An [OI]-compatible chat endpoint does not accept it.
 
 Models accept different numbers of questions in one request. If a model reports `max_questions` in its answers, Perch keeps
 its first request to eight questions and sizes later requests to fit. For a model that reports nothing, set

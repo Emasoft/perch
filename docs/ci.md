@@ -13,8 +13,8 @@ and the job fails when the scan finds something.
 
 ## GitHub Actions
 
-To run Perch in GitHub Actions, add the following workflow to `.github/workflows/perch.yml`, with the endpoint and its key
-as repository secrets:
+To run Perch in GitHub Actions, add the following workflow to `.github/workflows/perch.yml`, with the key in a repository
+secret:
 
 ```yaml
 name: perch
@@ -36,7 +36,6 @@ jobs:
           node-version: 22
       - run: npx --yes @lakeday/perch scan --since origin/${{ github.base_ref }}
         env:
-          PERCH_BASE_URL: https://api.openai.com/v1/decisions
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
@@ -59,9 +58,12 @@ Any other endpoint works the same way. Set `PERCH_BASE_URL` to it, and the key t
 `OPENAI_API_KEY` when it ends in `/decisions`, `TYPESAFE_API_KEY` otherwise. For the list of supported endpoints, see
 [Environment](/cli/#environment).
 
+The fallback to a local model does not reach CI: a runner is not Apple silicon and nobody is there to install one. `perch
+doctor` says so, and a spent window fails the job as it did before.
+
 ## GitLab CI
 
-Add this job to `.gitlab-ci.yml`, with the endpoint and its key as masked CI/CD variables:
+Add this job to `.gitlab-ci.yml`, with the key as a masked CI/CD variable named `OPENAI_API_KEY`:
 
 ```yaml
 perch:
@@ -70,7 +72,6 @@ perch:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
     GIT_DEPTH: 0
-    PERCH_BASE_URL: https://api.openai.com/v1/decisions
   script:
     - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     - npx --yes @lakeday/perch scan --since origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
