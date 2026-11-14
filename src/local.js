@@ -10,10 +10,10 @@
  * holds 16k tokens where the Decisions API holds 250k, so the report says which model answered instead of leaving the two runs
  * looking the same.
  */
-import { execFile, spawn as spawnChild } from 'node:child_process';
-import { access, constants } from 'node:fs/promises';
+import { execFile, execFileSync, spawn as spawnChild } from 'node:child_process';
+import { access, constants, mkdir, readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 /** The model, as the server names it in its answers, and as mlx-decision names it on the Hub. */
 export const LOCAL_MODEL = 'elephant-1';
@@ -36,6 +36,20 @@ export const SHARED_PORTS = [8123, 8000];
 
 /** How long the process already holding the port has to answer before perch reports it. It is loaded already, or it is not ours. */
 export const ADOPT_TIMEOUT_MS = 60_000;
+
+/** How many times each candidate server is probed before it is taken for absent, and how long to wait between the probes. */
+export const SHARED_PROBES = 3;
+export const SHARED_RETRY_MS = 300;
+
+/**
+ * The lock the machine's one mlx-decision server is started under on macOS. The LaunchAgent runs
+ * `lockf -t 0 ~/Library/Caches/mlx-decision/server.lock mlx-decision server ...`; perch takes the same lock, so whichever
+ * starts second fails at once instead of loading a second copy of the weights before the port bind fails.
+ */
+export const LOCKF = '/usr/bin/lockf';
+
+/** What lockf exits with when `-t 0` cannot take the lock: EX_TEMPFAIL, a server already holds it. */
+export const LOCKF_BUSY = 75;
 
 /**
  * The model to fall back to, or null when the fallback is off. `off` is the one spelling that turns it off — perch has no other
@@ -67,6 +81,18 @@ async function defaultWhich(env) {
     if (await found(candidate)) return candidate;
   }
   return null;
+}
+
+/**
+ * The name of a LaunchAgent plist for mlx-decision in ~/Library/LaunchAgents, or null. Such an agent owns the machine's server
+ * and restarts it, so perch spawning another one beside it is what loads the model twice; a missing directory is simply no agent.
+ */
+async function launchAgentFor(home) {
+  const names = await readdir(join(home, 'Library', 'LaunchAgents')).catch(error => {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  });
+  return names.find(name => name.includes('mlx-decision') && name.endsWith('.plist')) ?? null;
 }
 
 /**
@@ -137,11 +163,18 @@ export async function serving(baseUrl, model, fetchImpl = globalThis.fetch, prob
  * PERCH_LOCAL_URL names one outright and is then the only place looked at. Otherwise the ports found on a running mlx-decision's
  * command line, then PERCH_LOCAL_PORT, then SHARED_PORTS. Returns null when nothing answers.
  */
-export async function sharedServer({ env = {}, model = LOCAL_MODEL, fetchImpl = globalThis.fetch, ps = defaultPs, probeMs = 3000 } = {}) {
+export async function sharedServer({ env = {}, model = LOCAL_MODEL, fetchImpl = globalThis.fetch, ps = defaultPs, probeMs = 3000, retryMs = SHARED_RETRY_MS } = {}) {
   const candidates = env.PERCH_LOCAL_URL
     ? [env.PERCH_LOCAL_URL]
     : [...new Set([...(await portsFromProcesses(ps)), ...(env.PERCH_LOCAL_PORT ? [Number(env.PERCH_LOCAL_PORT)] : []), ...SHARED_PORTS])].map(endpointAt);
-  for (const baseUrl of candidates) if (await serving(baseUrl, model, fetchImpl, probeMs)) return { baseUrl };
+  // One missed probe is not proof nothing is there: a single 3 s probe that fails once while the server is busy would send the
+  // caller to start a second server beside it, so each candidate gets SHARED_PROBES tries before it is given up on.
+  for (const baseUrl of candidates) {
+    for (let attempt = 0; attempt < SHARED_PROBES; attempt++) {
+      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, retryMs));
+      if (await serving(baseUrl, model, fetchImpl, probeMs)) return { baseUrl };
+    }
+  }
   return null;
 }
 
@@ -172,7 +205,7 @@ function waitUntil({ ready, timeoutMs, child, describe }) {
     const deadline = Date.now() + timeoutMs;
     let settled = false;
     const settle = outcome => { if (!settled) { settled = true; clearInterval(timer); resolve(outcome); } };
-    const exit = code => settle({ ok: false, died: true, why: describe(code) });
+    const exit = code => settle({ ok: false, died: true, code, why: describe(code) });
     child?.once('exit', exit);
     const timer = setInterval(async () => {
       if (!(await ready())) { if (Date.now() > deadline) settle({ ok: false, why: describe(null) }); return; }
@@ -192,38 +225,78 @@ function waitUntil({ ready, timeoutMs, child, describe }) {
  * a second would load the model twice. So it is adopted once it answers, waiting ADOPT_TIMEOUT_MS for a sibling perch that is
  * still loading, and reported if it never does.
  */
+/**
+ * Start the server on a fixed port and wait for it to answer on `/health`.
+ *
+ * The model loads at startup, and the first run on a machine downloads several gigabytes of weights first, so this waits as long
+ * as START_TIMEOUT_MS and says what the server last printed if it runs out.
+ *
+ * A port already in use is not a reason to try another one: the process holding it is the server this machine gets, and starting
+ * a second would load the model twice. So it is adopted once it answers, waiting ADOPT_TIMEOUT_MS for a sibling perch that is
+ * still loading, and reported if it never does.
+ *
+ * The port is not enough of an exclusion on its own: mlx-decision loads its whole model BEFORE it binds the port, so a second
+ * process would hold a second copy of the weights in memory until the bind failed. On macOS the server is therefore started
+ * through the same `lockf` lock the LaunchAgent uses, which a second process fails to take at once, before any weights load; and
+ * when a LaunchAgent for mlx-decision is installed it owns the server, so perch never spawns one beside it and only waits for it.
+ */
 export async function startLocalModel({ bin, env = {}, model = LOCAL_MODEL, repo = LOCAL_MODEL_REPO, log = () => {}, spawn = spawnChild,
-  fetchImpl = globalThis.fetch, timeoutMs = START_TIMEOUT_MS, adoptTimeoutMs = ADOPT_TIMEOUT_MS }) {
+  fetchImpl = globalThis.fetch, timeoutMs = START_TIMEOUT_MS, adoptTimeoutMs = ADOPT_TIMEOUT_MS, platform = process.platform, lockf = LOCKF }) {
   const port = startPort(env);
-  const child = spawn(bin, ['server', '-m', repo, '--default-model', model, '--host', '127.0.0.1', '--port', String(port)], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const baseUrl = endpointAt(port);
+  const ready = () => serving(baseUrl, model, fetchImpl, 2000);
+  const adopt = async (heldBy, refusal) => {
+    const adopted = await waitUntil({ ready, timeoutMs: adoptTimeoutMs, describe: () => `nothing serving ${model} on port ${port} after ${Math.round(adoptTimeoutMs / 1000)} seconds` });
+    if (adopted.ok) {
+      log(`${heldBy}; using it`);
+      return { baseUrl, model, adopted: true };
+    }
+    throw new Error(refusal);
+  };
+  const home = env.HOME || homedir();
+  const agent = await launchAgentFor(home);
+  if (agent) {
+    return adopt(`${agent} in ~/Library/LaunchAgents runs mlx-decision for ${model} at ${baseUrl}`,
+      `${agent} in ~/Library/LaunchAgents manages mlx-decision on this machine, but nothing is serving ${model} on port ${port}; start that agent, or set PERCH_LOCAL_MODEL=off`);
+  }
+  const serverArgs = ['server', '-m', repo, '--default-model', model, '--host', '127.0.0.1', '--port', String(port)];
+  const locked = platform === 'darwin' && await found(lockf);
+  let command = bin;
+  let args = serverArgs;
+  if (locked) {
+    // The same lock file the LaunchAgent's own `lockf -t 0` takes, so the two cannot both be loading the model at once.
+    const lock = join(home, 'Library', 'Caches', 'mlx-decision', 'server.lock');
+    await mkdir(dirname(lock), { recursive: true });
+    command = lockf;
+    args = ['-t', '0', lock, bin, ...serverArgs];
+  }
+  const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
   // Enough of the tail to say why a start failed; a run of download progress is not worth holding.
   let tail = '';
   const hold = chunk => { tail = (tail + chunk).slice(-4000); };
   child.stdout?.on('data', hold);
   child.stderr?.on('data', hold);
   const last = () => (tail ? `: ${tail.trim().split('\n').at(-1)}` : '');
-  const baseUrl = endpointAt(port);
-  const ready = () => serving(baseUrl, model, fetchImpl, 2000);
   const describe = code => (code === null
     ? `${bin} did not answer on /health within ${Math.round(timeoutMs / 1000)} seconds${last()}`
     : `${bin} exited with ${code}${last()}`);
   const started = await waitUntil({ ready, timeoutMs, child, describe });
   if (started.ok) {
     log(`mlx-decision is serving ${model} at ${baseUrl}`);
-    return { baseUrl, model, pid: child.pid, stop: () => stopChild(child) };
+    return { baseUrl, model, pid: child.pid, stop: () => stopChild(child, locked) };
   }
   // Whatever holds the port is the one server this machine gets, so it is adopted rather than raced. A process that is not
   // mlx-decision, or is mlx-decision serving another model, is neither adopted nor replaced: starting beside it is the one thing
   // this module exists to prevent.
-  const taken = started.died && /address already in use|errno 48/i.test(tail);
+  // lockf exits LOCKF_BUSY when another process holds the lock: that is the same "a server is already here" answer as a taken
+  // port, only given before the weights load, so it takes the same adopt path instead of being thrown as a failed start.
+  const lockHeld = locked && started.died && started.code === LOCKF_BUSY;
+  const taken = lockHeld || (started.died && /address already in use|errno 48/i.test(tail));
   if (!taken) throw new Error(`could not start ${model} locally; ${started.why}`);
-  stopChild(child);
-  const adopted = await waitUntil({ ready, timeoutMs: adoptTimeoutMs, describe: () => `nothing serving ${model} on port ${port} after ${Math.round(adoptTimeoutMs / 1000)} seconds` });
-  if (adopted.ok) {
-    log(`port ${port} is already held by a server for ${model}; using it`);
-    return { baseUrl, model, adopted: true };
-  }
-  throw new Error(`port ${port} is held by something that is not serving ${model}; start mlx-decision, set PERCH_LOCAL_PORT to a free port, or set PERCH_LOCAL_MODEL=off`);
+  stopChild(child, locked);
+  return adopt(`port ${port} is already held by a server for ${model}`, lockHeld
+    ? `another mlx-decision holds the server lock but is not serving ${model} on port ${port} yet; wait for it to finish loading, or set PERCH_LOCAL_MODEL=off`
+    : `port ${port} is held by something that is not serving ${model}; start mlx-decision, set PERCH_LOCAL_PORT to a free port, or set PERCH_LOCAL_MODEL=off`);
 }
 
 /**
@@ -232,12 +305,31 @@ export async function startLocalModel({ bin, env = {}, model = LOCAL_MODEL, repo
  */
 const live = new Set();
 let installed = false;
-function stopChild(child) {
+function stopChild(child, viaLockf = false) {
   if (child.exitCode !== null || child.signalCode !== null) return;
-  child.kill('SIGTERM');
-  const kill = setTimeout(() => child.kill('SIGKILL'), 5000);
+  signalServer(child, viaLockf, 'SIGTERM');
+  const kill = setTimeout(() => signalServer(child, viaLockf, 'SIGKILL'), 5000);
   kill.unref?.();
   child.once('exit', () => clearTimeout(kill));
+}
+
+/**
+ * Send a signal to the server. Under lockf the child is lockf and the server is lockf's own child: lockf dies on SIGTERM without
+ * passing it on, which leaves the model loaded, the lock held and the server orphaned. So the signal goes to lockf's child, and
+ * lockf exits by itself with the server, releasing the lock. Before lockf has forked, it is lockf that is signalled.
+ */
+function signalServer(child, viaLockf, signal) {
+  const servers = viaLockf ? childrenOf(child.pid) : [];
+  if (!servers.length) { child.kill(signal); return; }
+  for (const pid of servers) {
+    try { process.kill(pid, signal); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+  }
+}
+
+/** The pids whose parent is `pid`, from the process table. */
+function childrenOf(pid) {
+  const table = execFileSync('ps', ['-eo', 'pid=,ppid='], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+  return table.split('\n').map(line => line.trim().split(/\s+/).map(Number)).filter(([, parent]) => parent === pid).map(([each]) => each);
 }
 
 /**
