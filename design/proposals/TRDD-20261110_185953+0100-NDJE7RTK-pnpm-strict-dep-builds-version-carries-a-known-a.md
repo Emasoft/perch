@@ -1,9 +1,9 @@
 ---
 trdd-id: NDJE7RTK
 title: pnpm-strict-dep-builds <?version?> carries a known advisory — pnpm-strict-dep-builds-unset — project uses pnpm but `strictDepBuilds=true` is not set in any of {pn
-column: proposal
+column: refused
 created: 2026-11-10T18:59:53+0100
-updated: 2026-11-14T19:53:27+0100
+updated: 2026-11-15T08:38:50+0100
 current-owner: janitor
 task-type: bugfix
 severity: high
@@ -12,6 +12,7 @@ ticket-severity: high
 ticket-evidence: [pnpm-strict-dep-builds]
 ticket-dedupe-key: DEP-001:pnpm-strict-dep-builds:pnpm-strict-dep-builds-unset — project uses pnpm but `strictDepBuilds=true` is not set in any of {pnpm-workspace.yaml, package.json#pnpm}. pnpm 10.3+ fails install on unr
 ticket-origin: supply-chain
+status: proposed
 ---
 
 # pnpm-strict-dep-builds <?version?> carries a known advisory — pnpm-strict-dep-builds-unset — project uses pnpm but `strictDepBuilds=true` is not set in any of {pn
@@ -59,3 +60,7 @@ path, and closes the ticket with an explicit status.
 
 ## Notes and lessons learned
 2026-11-14 main-claude triage: TRUE finding, upstream-owned, NOT fixed here. This is a config-policy check, not a dependency advisory: there is no version to fill in or bump. pnpm-workspace.yaml (upstream ced8580) holds the placeholder allowBuilds esbuild value set this to true or false and no strictDepBuilds setting. CI never runs pnpm (all workflows use npm ci). Same USER decision as TRDD-DP938HYW.
+
+## Approval log
+
+- 2026-11-15T08:38:50+0100 — REFUSED by main-agent@perch. true finding, upstream-owned: pnpm-workspace.yaml comes from upstream with a placeholder allowBuilds value and no strictDepBuilds; every fork workflow installs with npm ci, so the fork does not diverge to fix it here.

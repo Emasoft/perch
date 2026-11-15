@@ -1,9 +1,9 @@
 ---
 trdd-id: DP938HYW
 title: a package-manager safety knob is disabled in package-manager config — 2 gap(s)
-column: proposal
+column: refused
 created: 2026-11-10T18:59:47+0100
-updated: 2026-11-14T19:53:26+0100
+updated: 2026-11-15T08:38:49+0100
 current-owner: janitor
 task-type: bugfix
 severity: medium
@@ -12,6 +12,7 @@ ticket-severity: medium
 ticket-evidence: [package.json, .npmrc]
 ticket-dedupe-key: PKGPOL-001:package-manager config
 ticket-origin: package-manager-policy
+status: proposed
 ---
 
 # a package-manager safety knob is disabled in package-manager config — 2 gap(s)
@@ -57,3 +58,7 @@ path, and closes the ticket with an explicit status.
 
 ## Notes and lessons learned
 2026-11-14 main-claude triage: TRUE finding, upstream-owned, NOT fixed here. package-lock.json, pnpm-lock.yaml and pnpm-workspace.yaml are all tracked in upstream/main (the pnpm files were added by the maintainer in ced8580). Every workflow installs with npm ci, so the CI install path is npm. A fix means diverging the fork or proposing it upstream; awaiting the USER choice (leave as is, diverge the fork, or send upstream).
+
+## Approval log
+
+- 2026-11-15T08:38:49+0100 — REFUSED by main-agent@perch. true finding, upstream-owned: package-lock.json, pnpm-lock.yaml and pnpm-workspace.yaml all come from upstream and dependabot rewrites them; every fork workflow installs with npm ci, so the fork does not diverge to fix it here.
