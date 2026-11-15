@@ -17,3 +17,7 @@ perch.yaml.*.tmp
 
 # The janitor's per-session detector state, written under the project root and never part of the repository.
 .janitor/
+
+# Scratch and raw output (reports_dev/, scripts_dev/, ...) is private or intermediate and never committed.
+# reports/ holds final reports and stays tracked.
+*_dev/
